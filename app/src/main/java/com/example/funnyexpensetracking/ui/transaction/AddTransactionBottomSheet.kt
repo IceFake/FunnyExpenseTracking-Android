@@ -240,5 +240,18 @@ class AddTransactionBottomSheet(
             else -> "📝"
         }
     }
+
+    companion object {
+        // 支出分类
+        val EXPENSE_CATEGORIES = listOf(
+            "餐饮", "交通", "购物", "娱乐", "医疗",
+            "教育", "居住", "通讯", "服饰"
+        )
+
+        // 收入分类
+        val INCOME_CATEGORIES = listOf(
+            "工资", "奖金", "投资收益", "兼职", "红包", "退款"
+        )
+    }
 }
 
