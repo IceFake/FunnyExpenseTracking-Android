@@ -8,6 +8,7 @@ import com.example.funnyexpensetracking.data.local.entity.FixedIncomeType as Ent
 import com.example.funnyexpensetracking.domain.model.FixedIncome
 import com.example.funnyexpensetracking.domain.model.FixedIncomeFrequency
 import com.example.funnyexpensetracking.domain.model.FixedIncomeType
+import com.example.funnyexpensetracking.domain.usecase.RealtimeAssetCalculator
 import com.example.funnyexpensetracking.ui.common.BaseViewModel
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,7 +22,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class FixedIncomeViewModel @Inject constructor(
-    private val fixedIncomeDao: FixedIncomeDao
+    private val fixedIncomeDao: FixedIncomeDao,
+    private val realtimeAssetCalculator: RealtimeAssetCalculator
 ) : BaseViewModel<FixedIncomeUiState, FixedIncomeUiEvent>() {
 
     override fun initialState() = FixedIncomeUiState()
@@ -131,6 +133,10 @@ class FixedIncomeViewModel @Inject constructor(
                     isActive = true
                 )
                 fixedIncomeDao.insert(entity)
+
+                // 重新计算资产
+                realtimeAssetCalculator.recalculateAsset()
+
                 hideAddDialog()
                 sendEvent(FixedIncomeUiEvent.FixedIncomeAdded)
 
@@ -167,6 +173,10 @@ class FixedIncomeViewModel @Inject constructor(
                     createdAt = existingEntity?.createdAt ?: System.currentTimeMillis()
                 )
                 fixedIncomeDao.update(entity)
+
+                // 重新计算资产
+                realtimeAssetCalculator.recalculateAsset()
+
                 hideAddDialog()
                 sendEvent(FixedIncomeUiEvent.FixedIncomeUpdated)
                 sendEvent(FixedIncomeUiEvent.ShowMessage("更新成功"))
@@ -193,6 +203,10 @@ class FixedIncomeViewModel @Inject constructor(
                     isActive = fixedIncome.isActive
                 )
                 fixedIncomeDao.delete(entity)
+
+                // 重新计算资产
+                realtimeAssetCalculator.recalculateAsset()
+
                 sendEvent(FixedIncomeUiEvent.FixedIncomeDeleted)
                 sendEvent(FixedIncomeUiEvent.ShowMessage("删除成功"))
             } catch (e: Exception) {
@@ -208,6 +222,10 @@ class FixedIncomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 fixedIncomeDao.updateActiveStatus(fixedIncome.id, !fixedIncome.isActive)
+
+                // 重新计算资产
+                realtimeAssetCalculator.recalculateAsset()
+
                 val statusText = if (fixedIncome.isActive) "已停用" else "已启用"
                 sendEvent(FixedIncomeUiEvent.ShowMessage(statusText))
             } catch (e: Exception) {

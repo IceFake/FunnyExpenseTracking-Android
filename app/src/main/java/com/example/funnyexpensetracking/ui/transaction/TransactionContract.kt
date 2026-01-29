@@ -54,7 +54,16 @@ data class TransactionUiState(
     // 是否处于离线状态
     val isOffline: Boolean = false,
     // 待同步的记录数量
-    val pendingSyncCount: Int = 0
+    val pendingSyncCount: Int = 0,
+    // ========== 实时资产 ==========
+    // 实时资产值（包含固定收支按分钟计算的变动）
+    val realtimeAsset: Double = 0.0,
+    // 每分钟收入
+    val incomePerMinute: Double = 0.0,
+    // 每分钟支出
+    val expensePerMinute: Double = 0.0,
+    // 每分钟净变动
+    val netChangePerMinute: Double = 0.0
 ) : UiState
 
 /**

@@ -88,8 +88,20 @@ class TransactionFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collectLatest { state ->
-                    // 更新余额
-                    binding.tvTotalBalance.text = CurrencyUtil.formatCurrency(state.totalBalance)
+                    // 更新实时资产
+                    binding.tvRealtimeAsset.text = CurrencyUtil.formatCurrency(state.realtimeAsset)
+
+                    // 更新每分钟变动
+                    val netChange = state.netChangePerMinute
+                    if (netChange >= 0) {
+                        binding.tvPerMinuteChange.text = "+¥${String.format("%.4f", netChange)}/分钟"
+                        binding.tvPerMinuteChange.setTextColor(requireContext().getColor(android.R.color.holo_green_light))
+                    } else {
+                        binding.tvPerMinuteChange.text = "-¥${String.format("%.4f", -netChange)}/分钟"
+                        binding.tvPerMinuteChange.setTextColor(requireContext().getColor(android.R.color.holo_red_light))
+                    }
+
+                    // 更新今日收支
                     binding.tvTodayIncome.text = "+${CurrencyUtil.formatCurrency(state.todayIncome)}"
                     binding.tvTodayExpense.text = "-${CurrencyUtil.formatCurrency(state.todayExpense)}"
 

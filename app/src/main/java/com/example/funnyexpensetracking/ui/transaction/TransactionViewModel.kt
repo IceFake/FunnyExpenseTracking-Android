@@ -19,6 +19,7 @@ import com.example.funnyexpensetracking.domain.model.FixedIncomeFrequency
 import com.example.funnyexpensetracking.domain.model.FixedIncomeType
 import com.example.funnyexpensetracking.domain.model.Transaction
 import com.example.funnyexpensetracking.domain.model.TransactionType
+import com.example.funnyexpensetracking.domain.usecase.RealtimeAssetCalculator
 import com.example.funnyexpensetracking.ui.common.BaseViewModel
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.util.DateTimeUtil
@@ -41,7 +42,8 @@ class TransactionViewModel @Inject constructor(
     private val accountDao: AccountDao,
     private val fixedIncomeDao: FixedIncomeDao,
     private val syncManager: SyncManager,
-    private val networkMonitor: NetworkMonitor
+    private val networkMonitor: NetworkMonitor,
+    private val realtimeAssetCalculator: RealtimeAssetCalculator
 ) : BaseViewModel<TransactionUiState, TransactionUiEvent>() {
 
     private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
@@ -53,6 +55,23 @@ class TransactionViewModel @Inject constructor(
         loadData()
         initDefaultAccounts()
         observeSyncState()
+        observeRealtimeAsset()
+    }
+
+    /**
+     * 观察实时资产变化
+     */
+    private fun observeRealtimeAsset() {
+        realtimeAssetCalculator.realtimeAsset.onEach { assetData ->
+            updateState {
+                copy(
+                    realtimeAsset = assetData.currentAsset,
+                    incomePerMinute = assetData.incomePerMinute,
+                    expensePerMinute = assetData.expensePerMinute,
+                    netChangePerMinute = assetData.netChangePerMinute
+                )
+            }
+        }.launchIn(viewModelScope)
     }
 
     /**
@@ -272,6 +291,9 @@ class TransactionViewModel @Inject constructor(
                 val balanceChange = if (type == TransactionType.INCOME) amount else -amount
                 accountDao.updateBalance(accountId, balanceChange)
 
+                // 通知资产计算器账户余额变化
+                realtimeAssetCalculator.onAccountBalanceChanged(balanceChange)
+
                 hideAddDialog()
                 sendEvent(TransactionUiEvent.TransactionAdded)
 
@@ -315,6 +337,9 @@ class TransactionViewModel @Inject constructor(
                     // 回滚账户余额
                     val balanceChange = if (transaction.type == TransactionType.INCOME) -transaction.amount else transaction.amount
                     accountDao.updateBalance(transaction.accountId, balanceChange)
+
+                    // 通知资产计算器账户余额变化
+                    realtimeAssetCalculator.onAccountBalanceChanged(balanceChange)
 
                     sendEvent(TransactionUiEvent.TransactionDeleted)
                     sendEvent(TransactionUiEvent.ShowMessage("删除成功"))
@@ -458,6 +483,10 @@ class TransactionViewModel @Inject constructor(
                     isActive = true
                 )
                 fixedIncomeDao.insert(entity)
+
+                // 重新计算资产（固定收支变化会影响每分钟变动率）
+                realtimeAssetCalculator.recalculateAsset()
+
                 hideAddFixedIncomeDialog()
                 sendEvent(TransactionUiEvent.FixedIncomeAdded)
 

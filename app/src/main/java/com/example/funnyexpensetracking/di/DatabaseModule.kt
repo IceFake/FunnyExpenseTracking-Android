@@ -65,5 +65,11 @@ object DatabaseModule {
     fun provideSyncMetadataDao(database: AppDatabase): SyncMetadataDao {
         return database.syncMetadataDao()
     }
+
+    @Provides
+    @Singleton
+    fun provideAssetBaselineDao(database: AppDatabase): AssetBaselineDao {
+        return database.assetBaselineDao()
+    }
 }
 

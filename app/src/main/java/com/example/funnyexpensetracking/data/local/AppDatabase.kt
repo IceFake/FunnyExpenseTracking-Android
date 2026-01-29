@@ -16,9 +16,10 @@ import com.example.funnyexpensetracking.data.local.entity.*
         FixedIncomeEntity::class,
         StockHoldingEntity::class,
         AssetSnapshotEntity::class,
-        SyncMetadataEntity::class
+        SyncMetadataEntity::class,
+        AssetBaselineEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -30,5 +31,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun stockHoldingDao(): StockHoldingDao
     abstract fun assetSnapshotDao(): AssetSnapshotDao
     abstract fun syncMetadataDao(): SyncMetadataDao
+    abstract fun assetBaselineDao(): AssetBaselineDao
 }
 
