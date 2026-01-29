@@ -2,6 +2,7 @@ package com.example.funnyexpensetracking.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.example.funnyexpensetracking.data.local.dao.*
 import com.example.funnyexpensetracking.data.local.entity.*
 
@@ -14,11 +15,13 @@ import com.example.funnyexpensetracking.data.local.entity.*
         AccountEntity::class,
         FixedIncomeEntity::class,
         StockHoldingEntity::class,
-        AssetSnapshotEntity::class
+        AssetSnapshotEntity::class,
+        SyncMetadataEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun transactionDao(): TransactionDao
@@ -26,5 +29,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun fixedIncomeDao(): FixedIncomeDao
     abstract fun stockHoldingDao(): StockHoldingDao
     abstract fun assetSnapshotDao(): AssetSnapshotDao
+    abstract fun syncMetadataDao(): SyncMetadataDao
 }
 

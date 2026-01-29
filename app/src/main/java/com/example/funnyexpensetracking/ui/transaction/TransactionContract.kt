@@ -45,7 +45,14 @@ data class TransactionUiState(
     // 是否显示添加账户对话框
     val showAddAccountDialog: Boolean = false,
     // 当前编辑的交易（用于编辑模式）
-    val editingTransaction: Transaction? = null
+    val editingTransaction: Transaction? = null,
+    // ========== 同步状态 ==========
+    // 是否正在同步
+    val isSyncing: Boolean = false,
+    // 是否处于离线状态
+    val isOffline: Boolean = false,
+    // 待同步的记录数量
+    val pendingSyncCount: Int = 0
 ) : UiState
 
 /**

@@ -4,8 +4,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.funnyexpensetracking.data.local.dao.AccountDao
 import com.example.funnyexpensetracking.data.local.dao.TransactionDao
 import com.example.funnyexpensetracking.data.local.entity.AccountEntity
+import com.example.funnyexpensetracking.data.local.entity.SyncStatus
 import com.example.funnyexpensetracking.data.local.entity.TransactionEntity
 import com.example.funnyexpensetracking.data.local.entity.TransactionType as EntityTransactionType
+import com.example.funnyexpensetracking.data.sync.SyncManager
+import com.example.funnyexpensetracking.data.sync.SyncState
 import com.example.funnyexpensetracking.domain.model.Account
 import com.example.funnyexpensetracking.domain.model.DailyTransactions
 import com.example.funnyexpensetracking.domain.model.Transaction
@@ -13,6 +16,7 @@ import com.example.funnyexpensetracking.domain.model.TransactionType
 import com.example.funnyexpensetracking.ui.common.BaseViewModel
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.util.DateTimeUtil
+import com.example.funnyexpensetracking.util.NetworkMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
@@ -28,7 +32,9 @@ import javax.inject.Inject
 @HiltViewModel
 class TransactionViewModel @Inject constructor(
     private val transactionDao: TransactionDao,
-    private val accountDao: AccountDao
+    private val accountDao: AccountDao,
+    private val syncManager: SyncManager,
+    private val networkMonitor: NetworkMonitor
 ) : BaseViewModel<TransactionUiState, TransactionUiEvent>() {
 
     private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
@@ -39,6 +45,50 @@ class TransactionViewModel @Inject constructor(
     init {
         loadData()
         initDefaultAccounts()
+        observeSyncState()
+    }
+
+    /**
+     * 观察同步状态
+     */
+    private fun observeSyncState() {
+        syncManager.syncState.onEach { state ->
+            updateState {
+                copy(
+                    isSyncing = state is SyncState.Syncing,
+                    isOffline = !networkMonitor.isNetworkAvailable()
+                )
+            }
+            when (state) {
+                is SyncState.Success -> {
+                    if (state.syncedCount > 0) {
+                        sendEvent(TransactionUiEvent.ShowMessage("同步完成，共同步 ${state.syncedCount} 条记录"))
+                    }
+                }
+                is SyncState.Error -> {
+                    sendEvent(TransactionUiEvent.ShowMessage("同步失败: ${state.message}"))
+                }
+                else -> {}
+            }
+        }.launchIn(viewModelScope)
+
+        // 观察待同步数量
+        syncManager.pendingSyncCount.onEach { count ->
+            updateState { copy(pendingSyncCount = count) }
+        }.launchIn(viewModelScope)
+    }
+
+    /**
+     * 手动触发同步
+     */
+    fun triggerSync() {
+        viewModelScope.launch {
+            if (!networkMonitor.isNetworkAvailable()) {
+                sendEvent(TransactionUiEvent.ShowMessage("当前离线，数据将在网络恢复后自动同步"))
+                return@launch
+            }
+            syncManager.syncAll()
+        }
     }
 
     /**
@@ -173,6 +223,7 @@ class TransactionViewModel @Inject constructor(
 
     /**
      * 添加交易记录
+     * 离线优先：先保存本地，网络可用时自动同步
      */
     fun addTransaction(
         amount: Double,
@@ -190,7 +241,9 @@ class TransactionViewModel @Inject constructor(
                     category = category,
                     accountId = accountId,
                     note = note,
-                    date = date
+                    date = date,
+                    syncStatus = SyncStatus.PENDING_UPLOAD,
+                    updatedAt = System.currentTimeMillis()
                 )
                 transactionDao.insert(entity)
 
@@ -200,7 +253,19 @@ class TransactionViewModel @Inject constructor(
 
                 hideAddDialog()
                 sendEvent(TransactionUiEvent.TransactionAdded)
-                sendEvent(TransactionUiEvent.ShowMessage("记账成功"))
+
+                // 根据网络状态显示不同提示
+                val message = if (networkMonitor.isNetworkAvailable()) {
+                    "记账成功"
+                } else {
+                    "记账成功（离线模式，稍后自动同步）"
+                }
+                sendEvent(TransactionUiEvent.ShowMessage(message))
+
+                // 尝试同步
+                if (networkMonitor.isNetworkAvailable()) {
+                    syncManager.syncAll()
+                }
             } catch (e: Exception) {
                 updateState { copy(errorMessage = e.message) }
                 sendEvent(TransactionUiEvent.ShowMessage("记账失败: ${e.message}"))
@@ -210,28 +275,34 @@ class TransactionViewModel @Inject constructor(
 
     /**
      * 删除交易记录
+     * 离线优先：标记为待删除，网络可用时同步删除
      */
     fun deleteTransaction(transaction: Transaction) {
         viewModelScope.launch {
             try {
-                val entity = TransactionEntity(
-                    id = transaction.id,
-                    amount = transaction.amount,
-                    type = transaction.type.toEntityType(),
-                    category = transaction.category,
-                    accountId = transaction.accountId,
-                    note = transaction.note,
-                    date = transaction.date,
-                    createdAt = transaction.createdAt
-                )
-                transactionDao.delete(entity)
+                val entity = transactionDao.getById(transaction.id)
 
-                // 回滚账户余额
-                val balanceChange = if (transaction.type == TransactionType.INCOME) -transaction.amount else transaction.amount
-                accountDao.updateBalance(transaction.accountId, balanceChange)
+                if (entity != null) {
+                    if (entity.serverId != null) {
+                        // 有服务器ID，标记为待删除（软删除）
+                        transactionDao.markAsDeleted(transaction.id)
+                    } else {
+                        // 没有服务器ID，直接删除本地记录
+                        transactionDao.delete(entity)
+                    }
 
-                sendEvent(TransactionUiEvent.TransactionDeleted)
-                sendEvent(TransactionUiEvent.ShowMessage("删除成功"))
+                    // 回滚账户余额
+                    val balanceChange = if (transaction.type == TransactionType.INCOME) -transaction.amount else transaction.amount
+                    accountDao.updateBalance(transaction.accountId, balanceChange)
+
+                    sendEvent(TransactionUiEvent.TransactionDeleted)
+                    sendEvent(TransactionUiEvent.ShowMessage("删除成功"))
+
+                    // 尝试同步
+                    if (networkMonitor.isNetworkAvailable()) {
+                        syncManager.syncAll()
+                    }
+                }
             } catch (e: Exception) {
                 sendEvent(TransactionUiEvent.ShowMessage("删除失败: ${e.message}"))
             }
@@ -247,6 +318,7 @@ class TransactionViewModel @Inject constructor(
 
     /**
      * 更新交易记录
+     * 离线优先：先更新本地，标记待同步
      */
     fun updateTransaction(
         id: Long,
@@ -260,6 +332,7 @@ class TransactionViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val oldTransaction = currentState().editingTransaction ?: return@launch
+                val existingEntity = transactionDao.getById(id)
 
                 // 回滚旧账户余额
                 val oldBalanceChange = if (oldTransaction.type == TransactionType.INCOME) -oldTransaction.amount else oldTransaction.amount
@@ -268,12 +341,16 @@ class TransactionViewModel @Inject constructor(
                 // 更新交易记录
                 val entity = TransactionEntity(
                     id = id,
+                    serverId = existingEntity?.serverId,
                     amount = amount,
                     type = type.toEntityType(),
                     category = category,
                     accountId = accountId,
                     note = note,
-                    date = date
+                    date = date,
+                    createdAt = existingEntity?.createdAt ?: System.currentTimeMillis(),
+                    updatedAt = System.currentTimeMillis(),
+                    syncStatus = SyncStatus.PENDING_UPLOAD
                 )
                 transactionDao.update(entity)
 
@@ -284,6 +361,11 @@ class TransactionViewModel @Inject constructor(
                 hideAddDialog()
                 sendEvent(TransactionUiEvent.TransactionUpdated)
                 sendEvent(TransactionUiEvent.ShowMessage("更新成功"))
+
+                // 尝试同步
+                if (networkMonitor.isNetworkAvailable()) {
+                    syncManager.syncAll()
+                }
             } catch (e: Exception) {
                 sendEvent(TransactionUiEvent.ShowMessage("更新失败: ${e.message}"))
             }

@@ -59,5 +59,11 @@ object DatabaseModule {
     fun provideAssetSnapshotDao(database: AppDatabase): AssetSnapshotDao {
         return database.assetSnapshotDao()
     }
+
+    @Provides
+    @Singleton
+    fun provideSyncMetadataDao(database: AppDatabase): SyncMetadataDao {
+        return database.syncMetadataDao()
+    }
 }
 

@@ -44,5 +44,11 @@ abstract class RepositoryModule {
     abstract fun bindStockRepository(
         impl: StockRepositoryImpl
     ): StockRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAccountRepository(
+        impl: AccountRepositoryImpl
+    ): AccountRepository
 }
 
