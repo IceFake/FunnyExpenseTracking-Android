@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginBottom="16dp">
+
+    <!-- 日期头部 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/tvDate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="2024年01月01日"
+            android:textSize="14sp"
+            android:textColor="#666666" />
+
+        <TextView
+            android:id="@+id/tvDayOfWeek"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="星期一"
+            android:textSize="12sp"
+            android:textColor="#999999"
+            android:layout_marginEnd="16dp" />
+
+        <TextView
+            android:id="@+id/tvDayIncome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="收入:¥0"
+            android:textSize="12sp"
+            android:textColor="#4CAF50"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:id="@+id/tvDayExpense"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="支出:¥0"
+            android:textSize="12sp"
+            android:textColor="#FF5722" />
+    </LinearLayout>
+
+    <!-- 当日交易列表容器 -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp">
+
+        <LinearLayout
+            android:id="@+id/llTransactions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:divider="@drawable/divider_line"
+            android:showDividers="middle" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>
+

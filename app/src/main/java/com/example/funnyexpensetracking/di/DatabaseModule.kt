@@ -38,6 +38,12 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideAccountDao(database: AppDatabase): AccountDao {
+        return database.accountDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideFixedIncomeDao(database: AppDatabase): FixedIncomeDao {
         return database.fixedIncomeDao()
     }

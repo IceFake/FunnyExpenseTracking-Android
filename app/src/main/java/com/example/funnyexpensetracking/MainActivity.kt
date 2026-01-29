@@ -8,6 +8,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.funnyexpensetracking.ui.transaction.TransactionFragment
 import com.example.funnyexpensetracking.worker.AssetSnapshotWorker
 import com.example.funnyexpensetracking.worker.StockPriceSyncWorker
 import dagger.hilt.android.AndroidEntryPoint
@@ -23,6 +24,13 @@ class MainActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
+        }
+
+        // 加载TransactionFragment
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, TransactionFragment())
+                .commit()
         }
 
         // 初始化后台任务

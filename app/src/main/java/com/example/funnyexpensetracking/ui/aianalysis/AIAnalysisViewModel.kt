@@ -1,7 +1,7 @@
 package com.example.funnyexpensetracking.ui.aianalysis
 
 import androidx.lifecycle.viewModelScope
-import com.example.funnyexpensetracking.domain.usecase.ai.*
+import com.example.funnyexpensetracking.domain.repository.AIAnalysisRepository
 import com.example.funnyexpensetracking.ui.common.BaseViewModel
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.util.Resource
@@ -14,9 +14,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class AIAnalysisViewModel @Inject constructor(
-    private val getAIAnalysisUseCase: GetAIAnalysisUseCase,
-    private val getAISuggestionsUseCase: GetAISuggestionsUseCase,
-    private val getAnalysisHistoryUseCase: GetAnalysisHistoryUseCase
+    private val aiAnalysisRepository: AIAnalysisRepository
 ) : BaseViewModel<AIAnalysisUiState, AIAnalysisUiEvent>() {
 
     override fun initialState() = AIAnalysisUiState()
@@ -33,7 +31,7 @@ class AIAnalysisViewModel @Inject constructor(
         updateState { copy(isAnalyzing = true, loadingState = LoadingState.LOADING) }
 
         viewModelScope.launch {
-            when (val result = getAIAnalysisUseCase()) {
+            when (val result = aiAnalysisRepository.analyzeHabits()) {
                 is Resource.Success -> {
                     updateState {
                         copy(
@@ -44,7 +42,6 @@ class AIAnalysisViewModel @Inject constructor(
                     }
                     sendEvent(AIAnalysisUiEvent.AnalysisCompleted)
                     sendEvent(AIAnalysisUiEvent.ShowMessage("分析完成"))
-                    // 刷新历史记录
                     loadAnalysisHistory()
                 }
                 is Resource.Error -> {
@@ -55,7 +52,7 @@ class AIAnalysisViewModel @Inject constructor(
                             errorMessage = result.message
                         )
                     }
-                    sendEvent(AIAnalysisUiEvent.ShowMessage(result.message ?: "分析失败"))
+                    sendEvent(AIAnalysisUiEvent.ShowMessage("分析失败: ${result.message}"))
                 }
                 is Resource.Loading -> {}
             }
@@ -65,14 +62,14 @@ class AIAnalysisViewModel @Inject constructor(
     /**
      * 加载AI建议
      */
-    fun loadSuggestions() {
+    private fun loadSuggestions() {
         viewModelScope.launch {
-            when (val result = getAISuggestionsUseCase()) {
+            when (val result = aiAnalysisRepository.getSuggestions()) {
                 is Resource.Success -> {
                     updateState { copy(suggestions = result.data ?: emptyList()) }
                 }
                 is Resource.Error -> {
-                    // 加载建议失败不影响主页面
+                    sendEvent(AIAnalysisUiEvent.ShowMessage("获取建议失败"))
                 }
                 is Resource.Loading -> {}
             }
@@ -82,25 +79,33 @@ class AIAnalysisViewModel @Inject constructor(
     /**
      * 加载历史分析记录
      */
-    fun loadAnalysisHistory(limit: Int = 10) {
+    private fun loadAnalysisHistory() {
         viewModelScope.launch {
-            when (val result = getAnalysisHistoryUseCase(limit)) {
+            when (val result = aiAnalysisRepository.getAnalysisHistory()) {
                 is Resource.Success -> {
                     updateState { copy(historyResults = result.data ?: emptyList()) }
                 }
-                is Resource.Error -> {
-                    // 加载历史失败不影响主页面
-                }
+                is Resource.Error -> {}
                 is Resource.Loading -> {}
             }
         }
     }
 
     /**
-     * 清除当前分析结果
+     * 查看历史分析详情
      */
-    fun clearAnalysisResult() {
-        updateState { copy(analysisResult = null) }
+    fun viewAnalysisDetail(analysisId: String) {
+        viewModelScope.launch {
+            when (val result = aiAnalysisRepository.getAnalysisById(analysisId)) {
+                is Resource.Success -> {
+                    updateState { copy(analysisResult = result.data) }
+                }
+                is Resource.Error -> {
+                    sendEvent(AIAnalysisUiEvent.ShowMessage("获取详情失败"))
+                }
+                is Resource.Loading -> {}
+            }
+        }
     }
 }
 

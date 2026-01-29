@@ -1,7 +1,7 @@
 package com.example.funnyexpensetracking.ui.statistics
 
 import androidx.lifecycle.viewModelScope
-import com.example.funnyexpensetracking.domain.usecase.statistics.*
+import com.example.funnyexpensetracking.domain.repository.StatisticsRepository
 import com.example.funnyexpensetracking.ui.common.BaseViewModel
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.util.DateTimeUtil
@@ -15,10 +15,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class StatisticsViewModel @Inject constructor(
-    private val getMonthlyStatisticsUseCase: GetMonthlyStatisticsUseCase,
-    private val getYearlyStatisticsUseCase: GetYearlyStatisticsUseCase,
-    private val getCategoryStatisticsUseCase: GetCategoryStatisticsUseCase,
-    private val getTrendStatisticsUseCase: GetTrendStatisticsUseCase
+    private val statisticsRepository: StatisticsRepository
 ) : BaseViewModel<StatisticsUiState, StatisticsUiEvent>() {
 
     override fun initialState() = StatisticsUiState(
@@ -53,7 +50,7 @@ class StatisticsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            when (val result = getMonthlyStatisticsUseCase(year, month)) {
+            when (val result = statisticsRepository.getMonthlyStatistics(year, month)) {
                 is Resource.Success -> {
                     updateState {
                         copy(
@@ -62,8 +59,6 @@ class StatisticsViewModel @Inject constructor(
                             loadingState = LoadingState.SUCCESS
                         )
                     }
-                    // 同时加载分类统计
-                    loadCategoryStatistics(year, month)
                 }
                 is Resource.Error -> {
                     updateState {
@@ -72,12 +67,11 @@ class StatisticsViewModel @Inject constructor(
                             errorMessage = result.message
                         )
                     }
-                    sendEvent(StatisticsUiEvent.ShowMessage(result.message ?: "加载失败"))
+                    sendEvent(StatisticsUiEvent.ShowMessage("加载失败: ${result.message}"))
                 }
-                is Resource.Loading -> {
-                    // 保持加载状态
-                }
+                is Resource.Loading -> {}
             }
+            loadCategoryStatistics(year, month)
         }
     }
 
@@ -94,7 +88,7 @@ class StatisticsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            when (val result = getYearlyStatisticsUseCase(year)) {
+            when (val result = statisticsRepository.getYearlyStatistics(year)) {
                 is Resource.Success -> {
                     updateState {
                         copy(
@@ -111,7 +105,7 @@ class StatisticsViewModel @Inject constructor(
                             errorMessage = result.message
                         )
                     }
-                    sendEvent(StatisticsUiEvent.ShowMessage(result.message ?: "加载失败"))
+                    sendEvent(StatisticsUiEvent.ShowMessage("加载失败: ${result.message}"))
                 }
                 is Resource.Loading -> {}
             }
@@ -123,13 +117,11 @@ class StatisticsViewModel @Inject constructor(
      */
     private fun loadCategoryStatistics(year: Int, month: Int) {
         viewModelScope.launch {
-            when (val result = getCategoryStatisticsUseCase(year, month)) {
+            when (val result = statisticsRepository.getCategoryStatistics(year, month)) {
                 is Resource.Success -> {
                     updateState { copy(categoryStats = result.data ?: emptyList()) }
                 }
-                is Resource.Error -> {
-                    // 分类统计加载失败不影响主页面
-                }
+                is Resource.Error -> {}
                 is Resource.Loading -> {}
             }
         }
@@ -140,12 +132,12 @@ class StatisticsViewModel @Inject constructor(
      */
     fun loadTrendStatistics(months: Int = 6) {
         viewModelScope.launch {
-            when (val result = getTrendStatisticsUseCase(months)) {
+            when (val result = statisticsRepository.getTrendStatistics(months)) {
                 is Resource.Success -> {
                     updateState { copy(trendStatistics = result.data) }
                 }
                 is Resource.Error -> {
-                    sendEvent(StatisticsUiEvent.ShowMessage(result.message ?: "加载趋势失败"))
+                    sendEvent(StatisticsUiEvent.ShowMessage("加载趋势失败"))
                 }
                 is Resource.Loading -> {}
             }
@@ -153,40 +145,41 @@ class StatisticsViewModel @Inject constructor(
     }
 
     /**
-     * 切换到月视图
+     * 切换到上个月
      */
-    fun switchToMonthlyView() {
-        if (!currentState().isMonthlyView) {
-            loadMonthlyStatistics(currentState().selectedYear, currentState().selectedMonth)
+    fun previousMonth() {
+        val state = currentState()
+        var year = state.selectedYear
+        var month = state.selectedMonth - 1
+        if (month < 1) {
+            month = 12
+            year--
         }
+        loadMonthlyStatistics(year, month)
     }
 
     /**
-     * 切换到年视图
+     * 切换到下个月
      */
-    fun switchToYearlyView() {
-        if (currentState().isMonthlyView) {
-            loadYearlyStatistics(currentState().selectedYear)
+    fun nextMonth() {
+        val state = currentState()
+        var year = state.selectedYear
+        var month = state.selectedMonth + 1
+        if (month > 12) {
+            month = 1
+            year++
         }
+        loadMonthlyStatistics(year, month)
     }
 
     /**
-     * 选择年月
+     * 切换年份
      */
-    fun selectYearMonth(year: Int, month: Int) {
+    fun selectYear(year: Int) {
         if (currentState().isMonthlyView) {
-            loadMonthlyStatistics(year, month)
+            loadMonthlyStatistics(year, currentState().selectedMonth)
         } else {
             loadYearlyStatistics(year)
-        }
-    }
-
-    /**
-     * 打开图表
-     */
-    fun openChart() {
-        currentState().chartUrl?.let { url ->
-            sendEvent(StatisticsUiEvent.OpenChart(url))
         }
     }
 }

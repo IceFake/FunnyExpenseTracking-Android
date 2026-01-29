@@ -11,6 +11,7 @@ import com.example.funnyexpensetracking.data.local.entity.*
 @Database(
     entities = [
         TransactionEntity::class,
+        AccountEntity::class,
         FixedIncomeEntity::class,
         StockHoldingEntity::class,
         AssetSnapshotEntity::class
@@ -21,6 +22,7 @@ import com.example.funnyexpensetracking.data.local.entity.*
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun transactionDao(): TransactionDao
+    abstract fun accountDao(): AccountDao
     abstract fun fixedIncomeDao(): FixedIncomeDao
     abstract fun stockHoldingDao(): StockHoldingDao
     abstract fun assetSnapshotDao(): AssetSnapshotDao

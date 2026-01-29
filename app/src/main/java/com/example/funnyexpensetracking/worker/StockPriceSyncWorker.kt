@@ -1,26 +1,21 @@
 package com.example.funnyexpensetracking.worker
 
 import android.content.Context
-import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.funnyexpensetracking.domain.repository.StockRepository
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
 
 /**
  * 股票价格同步Worker - 定期刷新股票价格
+ * TODO: 实现完整的股票价格同步功能
  */
-@HiltWorker
-class StockPriceSyncWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted workerParams: WorkerParameters,
-    private val stockRepository: StockRepository
+class StockPriceSyncWorker(
+    context: Context,
+    workerParams: WorkerParameters
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
         return try {
-            stockRepository.refreshAllStockPrices()
+            // TODO: 同步股票价格
             Result.success()
         } catch (e: Exception) {
             Result.retry()
