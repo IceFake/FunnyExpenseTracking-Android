@@ -111,16 +111,35 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 账单列表标题 -->
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- 账单列表标题栏 -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="账单明细"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/black"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="账单明细"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/black" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFixedIncome"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="固定收支"
+                android:textSize="12sp"
+                app:cornerRadius="18dp"
+                app:strokeWidth="1dp" />
+
+        </LinearLayout>
 
         <!-- 账单列表 -->
         <androidx.recyclerview.widget.RecyclerView

@@ -44,6 +44,8 @@ data class TransactionUiState(
     val showAddDialog: Boolean = false,
     // 是否显示添加账户对话框
     val showAddAccountDialog: Boolean = false,
+    // 是否显示添加固定收支对话框
+    val showAddFixedIncomeDialog: Boolean = false,
     // 当前编辑的交易（用于编辑模式）
     val editingTransaction: Transaction? = null,
     // ========== 同步状态 ==========
@@ -78,6 +80,7 @@ sealed class TransactionUiEvent : UiEvent {
     object TransactionDeleted : TransactionUiEvent()
     object TransactionUpdated : TransactionUiEvent()
     object AccountAdded : TransactionUiEvent()
+    object FixedIncomeAdded : TransactionUiEvent()
     object DismissDialog : TransactionUiEvent()
 }
 

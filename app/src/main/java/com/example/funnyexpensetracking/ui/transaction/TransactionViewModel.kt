@@ -2,15 +2,21 @@ package com.example.funnyexpensetracking.ui.transaction
 
 import androidx.lifecycle.viewModelScope
 import com.example.funnyexpensetracking.data.local.dao.AccountDao
+import com.example.funnyexpensetracking.data.local.dao.FixedIncomeDao
 import com.example.funnyexpensetracking.data.local.dao.TransactionDao
 import com.example.funnyexpensetracking.data.local.entity.AccountEntity
+import com.example.funnyexpensetracking.data.local.entity.FixedIncomeEntity
 import com.example.funnyexpensetracking.data.local.entity.SyncStatus
 import com.example.funnyexpensetracking.data.local.entity.TransactionEntity
 import com.example.funnyexpensetracking.data.local.entity.TransactionType as EntityTransactionType
+import com.example.funnyexpensetracking.data.local.entity.FixedIncomeType as EntityFixedIncomeType
+import com.example.funnyexpensetracking.data.local.entity.FixedIncomeFrequency as EntityFixedIncomeFrequency
 import com.example.funnyexpensetracking.data.sync.SyncManager
 import com.example.funnyexpensetracking.data.sync.SyncState
 import com.example.funnyexpensetracking.domain.model.Account
 import com.example.funnyexpensetracking.domain.model.DailyTransactions
+import com.example.funnyexpensetracking.domain.model.FixedIncomeFrequency
+import com.example.funnyexpensetracking.domain.model.FixedIncomeType
 import com.example.funnyexpensetracking.domain.model.Transaction
 import com.example.funnyexpensetracking.domain.model.TransactionType
 import com.example.funnyexpensetracking.ui.common.BaseViewModel
@@ -33,6 +39,7 @@ import javax.inject.Inject
 class TransactionViewModel @Inject constructor(
     private val transactionDao: TransactionDao,
     private val accountDao: AccountDao,
+    private val fixedIncomeDao: FixedIncomeDao,
     private val syncManager: SyncManager,
     private val networkMonitor: NetworkMonitor
 ) : BaseViewModel<TransactionUiState, TransactionUiEvent>() {
@@ -219,6 +226,20 @@ class TransactionViewModel @Inject constructor(
      */
     fun hideAddAccountDialog() {
         updateState { copy(showAddAccountDialog = false) }
+    }
+
+    /**
+     * 显示添加固定收支对话框
+     */
+    fun showAddFixedIncomeDialog() {
+        updateState { copy(showAddFixedIncomeDialog = true) }
+    }
+
+    /**
+     * 隐藏添加固定收支对话框
+     */
+    fun hideAddFixedIncomeDialog() {
+        updateState { copy(showAddFixedIncomeDialog = false) }
     }
 
     /**
@@ -415,6 +436,39 @@ class TransactionViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 添加固定收支
+     * 固定收支会按分钟计算并实时更新资产
+     */
+    fun addFixedIncome(
+        name: String,
+        amount: Double,
+        type: FixedIncomeType,
+        frequency: FixedIncomeFrequency,
+        startDate: Long
+    ) {
+        viewModelScope.launch {
+            try {
+                val entity = FixedIncomeEntity(
+                    name = name,
+                    amount = amount,
+                    type = type.toEntityType(),
+                    frequency = frequency.toEntityFrequency(),
+                    startDate = startDate,
+                    isActive = true
+                )
+                fixedIncomeDao.insert(entity)
+                hideAddFixedIncomeDialog()
+                sendEvent(TransactionUiEvent.FixedIncomeAdded)
+
+                val typeText = if (type == FixedIncomeType.INCOME) "收入" else "支出"
+                sendEvent(TransactionUiEvent.ShowMessage("固定$typeText 添加成功"))
+            } catch (e: Exception) {
+                sendEvent(TransactionUiEvent.ShowMessage("添加固定收支失败: ${e.message}"))
+            }
+        }
+    }
+
     // ========== 类型转换扩展函数 ==========
 
     private fun TransactionEntity.toDomainModel(accountName: String): Transaction {
@@ -453,6 +507,22 @@ class TransactionViewModel @Inject constructor(
         return when (this) {
             EntityTransactionType.INCOME -> TransactionType.INCOME
             EntityTransactionType.EXPENSE -> TransactionType.EXPENSE
+        }
+    }
+
+    private fun FixedIncomeType.toEntityType(): EntityFixedIncomeType {
+        return when (this) {
+            FixedIncomeType.INCOME -> EntityFixedIncomeType.INCOME
+            FixedIncomeType.EXPENSE -> EntityFixedIncomeType.EXPENSE
+        }
+    }
+
+    private fun FixedIncomeFrequency.toEntityFrequency(): EntityFixedIncomeFrequency {
+        return when (this) {
+            FixedIncomeFrequency.DAILY -> EntityFixedIncomeFrequency.DAILY
+            FixedIncomeFrequency.WEEKLY -> EntityFixedIncomeFrequency.WEEKLY
+            FixedIncomeFrequency.MONTHLY -> EntityFixedIncomeFrequency.MONTHLY
+            FixedIncomeFrequency.YEARLY -> EntityFixedIncomeFrequency.YEARLY
         }
     }
 }

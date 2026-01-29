@@ -27,7 +27,8 @@ class AddTransactionBottomSheet(
     private val editingTransaction: Transaction?,
     private val onSave: (amount: Double, type: TransactionType, category: String, accountId: Long, note: String, date: Long) -> Unit,
     private val onDismiss: () -> Unit,
-    private val onAddAccount: () -> Unit
+    private val onAddAccount: () -> Unit,
+    private val onAddFixedIncome: () -> Unit = {}
 ) : BottomSheetDialog(context) {
 
     private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
@@ -61,9 +62,16 @@ class AddTransactionBottomSheet(
         val etDate = view.findViewById<TextInputEditText>(R.id.etDate)
         val etNote = view.findViewById<TextInputEditText>(R.id.etNote)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSave)
+        val btnFixedIncome = view.findViewById<MaterialButton>(R.id.btnFixedIncome)
 
         // 设置默认日期
         etDate.setText(dateFormat.format(Date(selectedDate)))
+
+        // 固定收支按钮点击
+        btnFixedIncome.setOnClickListener {
+            dismiss()
+            onAddFixedIncome()
+        }
 
         // 类型切换
         toggleType.check(R.id.btnExpense)

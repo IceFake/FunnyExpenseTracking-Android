@@ -71,6 +71,17 @@ class TransactionFragment : Fragment() {
         binding.fabAdd.setOnClickListener {
             viewModel.showAddDialog()
         }
+
+        binding.btnFixedIncome.setOnClickListener {
+            navigateToFixedIncome()
+        }
+    }
+
+    private fun navigateToFixedIncome() {
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, com.example.funnyexpensetracking.ui.fixedincome.FixedIncomeFragment())
+            .addToBackStack(null)
+            .commit()
     }
 
     private fun observeState() {
@@ -102,6 +113,11 @@ class TransactionFragment : Fragment() {
                     // 显示添加账户对话框
                     if (state.showAddAccountDialog) {
                         showAddAccountDialog()
+                    }
+
+                    // 显示添加固定收支对话框
+                    if (state.showAddFixedIncomeDialog) {
+                        showAddFixedIncomeDialog()
                     }
                 }
             }
@@ -165,6 +181,9 @@ class TransactionFragment : Fragment() {
             },
             onAddAccount = {
                 viewModel.showAddAccountDialog()
+            },
+            onAddFixedIncome = {
+                viewModel.showAddFixedIncomeDialog()
             }
         )
 
@@ -192,6 +211,26 @@ class TransactionFragment : Fragment() {
         dialog.show()
     }
 
+    private var addFixedIncomeDialog: BottomSheetDialog? = null
+
+    private fun showAddFixedIncomeDialog() {
+        if (addFixedIncomeDialog?.isShowing == true) return
+
+        val dialog = AddFixedIncomeBottomSheet(
+            context = requireContext(),
+            onSave = { name, amount, type, frequency, startDate ->
+                viewModel.addFixedIncome(name, amount, type, frequency, startDate)
+            },
+            onDismiss = {
+                viewModel.hideAddFixedIncomeDialog()
+                addFixedIncomeDialog = null
+            }
+        )
+
+        addFixedIncomeDialog = dialog
+        dialog.show()
+    }
+
     private fun showDeleteConfirmDialog(transaction: Transaction) {
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle("删除确认")
@@ -207,6 +246,7 @@ class TransactionFragment : Fragment() {
         super.onDestroyView()
         addTransactionDialog?.dismiss()
         addAccountDialog?.dismiss()
+        addFixedIncomeDialog?.dismiss()
         _binding = null
     }
 }
