@@ -35,6 +35,7 @@ data class FixedIncomeEntity(
     val startDate: Long,                   // 开始日期
     val endDate: Long? = null,             // 结束日期（可为空，表示持续）
     val isActive: Boolean = true,          // 是否生效
+    val accumulatedAmount: Double = 0.0,   // 累计收入/支出总额
     val createdAt: Long = System.currentTimeMillis()
 )
 

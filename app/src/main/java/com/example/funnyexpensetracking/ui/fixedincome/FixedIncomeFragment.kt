@@ -166,7 +166,7 @@ class FixedIncomeFragment : Fragment() {
         val dialog = AddFixedIncomeBottomSheet(
             context = requireContext(),
             editingFixedIncome = editingFixedIncome,
-            onSave = { name, amount, type, frequency, startDate ->
+            onSave = { name, amount, type, frequency, startDate, accumulatedAmount ->
                 if (editingFixedIncome != null) {
                     viewModel.updateFixedIncome(
                         id = editingFixedIncome.id,
@@ -174,10 +174,11 @@ class FixedIncomeFragment : Fragment() {
                         amount = amount,
                         type = type,
                         frequency = frequency,
-                        startDate = startDate
+                        startDate = startDate,
+                        accumulatedAmount = accumulatedAmount
                     )
                 } else {
-                    viewModel.addFixedIncome(name, amount, type, frequency, startDate)
+                    viewModel.addFixedIncome(name, amount, type, frequency, startDate, accumulatedAmount)
                 }
             },
             onDismiss = {

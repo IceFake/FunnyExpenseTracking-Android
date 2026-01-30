@@ -3,6 +3,7 @@ package com.example.funnyexpensetracking.domain.usecase
 import com.example.funnyexpensetracking.data.local.dao.AccountDao
 import com.example.funnyexpensetracking.data.local.dao.AssetBaselineDao
 import com.example.funnyexpensetracking.data.local.dao.FixedIncomeDao
+import com.example.funnyexpensetracking.data.local.dao.TransactionDao
 import com.example.funnyexpensetracking.data.local.entity.AssetBaselineEntity
 import com.example.funnyexpensetracking.data.local.entity.FixedIncomeType
 import kotlinx.coroutines.CoroutineScope
@@ -24,16 +25,23 @@ data class RealtimeAssetData(
     val expensePerMinute: Double,       // 每分钟支出
     val netChangePerMinute: Double,     // 每分钟净变动
     val baselineTimestamp: Long,        // 基准时间
-    val baselineAmount: Double          // 基准金额
+    val baselineAmount: Double,         // 基准金额
+    val totalTransactionIncome: Double = 0.0,    // 普通收入总额
+    val totalTransactionExpense: Double = 0.0,   // 普通支出总额
+    val totalFixedIncome: Double = 0.0,          // 固定收入累计总额
+    val totalFixedExpense: Double = 0.0          // 固定支出累计总额
 )
 
 /**
  * 实时资产计算器
- * 负责根据固定收支计算当前时间点的实时资产值
+ * 负责根据普通收支和固定收支的累计值计算实时资产
+ *
+ * 总资产 = 普通收入总额 - 普通支出总额 + 固定收入累计总额 - 固定支出累计总额
  */
 @Singleton
 class RealtimeAssetCalculator @Inject constructor(
     private val fixedIncomeDao: FixedIncomeDao,
+    private val transactionDao: TransactionDao,
     private val accountDao: AccountDao,
     private val assetBaselineDao: AssetBaselineDao
 ) {
@@ -74,10 +82,10 @@ class RealtimeAssetCalculator @Inject constructor(
     }
 
     /**
-     * 更新当前资产值（基于基准值和时间差计算）
+     * 更新当前资产值
+     * 同时自动累加每个固定收支项目的累计金额
      */
     private suspend fun updateCurrentAsset() {
-        val baseline = assetBaselineDao.getBaseline() ?: return
         val fixedIncomes = fixedIncomeDao.getAllActiveFixedIncomes().first()
 
         // 计算每分钟净变动
@@ -91,30 +99,52 @@ class RealtimeAssetCalculator @Inject constructor(
             } else {
                 expensePerMinute += perMinute
             }
+
+            // 自动累加每分钟的变化值到累计金额
+            fixedIncomeDao.addToAccumulatedAmount(entity.id, perMinute)
         }
 
         val netChangePerMinute = incomePerMinute - expensePerMinute
 
-        // 计算从基准时间到现在经过的分钟数
-        val currentMinuteTimestamp = getCurrentMinuteTimestamp()
-        val minutesElapsed = (currentMinuteTimestamp - baseline.baselineTimestamp) / 60_000
+        // 获取普通收支总额
+        val totalTransactionIncome = transactionDao.getTotalIncome()
+        val totalTransactionExpense = transactionDao.getTotalExpense()
 
-        // 计算当前资产
-        val currentAsset = baseline.baselineAmount + (netChangePerMinute * minutesElapsed)
+        // 获取固定收支累计总额
+        val totalFixedIncome = fixedIncomeDao.getTotalAccumulatedIncome()
+        val totalFixedExpense = fixedIncomeDao.getTotalAccumulatedExpense()
+
+        // 计算当前资产 = 普通收入 - 普通支出 + 固定收入累计 - 固定支出累计
+        val currentAsset = totalTransactionIncome - totalTransactionExpense +
+                          totalFixedIncome - totalFixedExpense
+
+        val currentMinuteTimestamp = getCurrentMinuteTimestamp()
 
         _realtimeAsset.value = RealtimeAssetData(
             currentAsset = currentAsset,
             incomePerMinute = incomePerMinute,
             expensePerMinute = expensePerMinute,
             netChangePerMinute = netChangePerMinute,
-            baselineTimestamp = baseline.baselineTimestamp,
-            baselineAmount = baseline.baselineAmount
+            baselineTimestamp = currentMinuteTimestamp,
+            baselineAmount = currentAsset,
+            totalTransactionIncome = totalTransactionIncome,
+            totalTransactionExpense = totalTransactionExpense,
+            totalFixedIncome = totalFixedIncome,
+            totalFixedExpense = totalFixedExpense
         )
+
+        // 更新基准值
+        val newBaseline = AssetBaselineEntity(
+            id = 1,
+            baselineTimestamp = currentMinuteTimestamp,
+            baselineAmount = currentAsset
+        )
+        assetBaselineDao.insert(newBaseline)
     }
 
     /**
-     * 重新计算资产（当固定收支变化时调用）
-     * 会重新设置基准时间和基准金额
+     * 重新计算资产（当收支变化时调用）
+     * 总资产 = 普通收入总额 - 普通支出总额 + 固定收入累计总额 - 固定支出累计总额
      */
     suspend fun recalculateAsset() {
         val fixedIncomes = fixedIncomeDao.getAllActiveFixedIncomes().first()
@@ -134,97 +164,66 @@ class RealtimeAssetCalculator @Inject constructor(
 
         val netChangePerMinute = incomePerMinute - expensePerMinute
 
-        // 获取当前基准值
-        val existingBaseline = assetBaselineDao.getBaseline()
+        // 获取普通收支总额
+        val totalTransactionIncome = transactionDao.getTotalIncome()
+        val totalTransactionExpense = transactionDao.getTotalExpense()
+
+        // 获取固定收支累计总额
+        val totalFixedIncome = fixedIncomeDao.getTotalAccumulatedIncome()
+        val totalFixedExpense = fixedIncomeDao.getTotalAccumulatedExpense()
+
+        // 计算当前资产 = 普通收入 - 普通支出 + 固定收入累计 - 固定支出累计
+        val currentAsset = totalTransactionIncome - totalTransactionExpense +
+                          totalFixedIncome - totalFixedExpense
+
         val currentMinuteTimestamp = getCurrentMinuteTimestamp()
-
-        val newBaselineAmount: Double
-
-        if (existingBaseline != null) {
-            // 先计算到当前时间的资产值，然后以此作为新的基准
-            val minutesElapsed = (currentMinuteTimestamp - existingBaseline.baselineTimestamp) / 60_000
-
-            // 用旧的每分钟变动率计算到现在的值
-            val oldFixedIncomes = fixedIncomes // 这里实际上应该用旧的，但简化处理
-            var oldNetChangePerMinute = 0.0
-            oldFixedIncomes.forEach { entity ->
-                val perMinute = calculatePerMinute(entity.amount, entity.frequency)
-                if (entity.type == FixedIncomeType.INCOME) {
-                    oldNetChangePerMinute += perMinute
-                } else {
-                    oldNetChangePerMinute -= perMinute
-                }
-            }
-
-            newBaselineAmount = existingBaseline.baselineAmount + (oldNetChangePerMinute * minutesElapsed)
-        } else {
-            // 首次设置，从账户余额开始
-            newBaselineAmount = accountDao.getTotalBalance() ?: 0.0
-        }
 
         // 保存新的基准值
         val newBaseline = AssetBaselineEntity(
             id = 1,
             baselineTimestamp = currentMinuteTimestamp,
-            baselineAmount = newBaselineAmount
+            baselineAmount = currentAsset
         )
         assetBaselineDao.insert(newBaseline)
 
         // 更新状态
         _realtimeAsset.value = RealtimeAssetData(
-            currentAsset = newBaselineAmount,
+            currentAsset = currentAsset,
             incomePerMinute = incomePerMinute,
             expensePerMinute = expensePerMinute,
             netChangePerMinute = netChangePerMinute,
             baselineTimestamp = currentMinuteTimestamp,
-            baselineAmount = newBaselineAmount
+            baselineAmount = currentAsset,
+            totalTransactionIncome = totalTransactionIncome,
+            totalTransactionExpense = totalTransactionExpense,
+            totalFixedIncome = totalFixedIncome,
+            totalFixedExpense = totalFixedExpense
         )
     }
 
     /**
-     * 当账户余额变化时更新基准值
+     * 当普通收支变化时重新计算资产
+     */
+    suspend fun onTransactionChanged() {
+        recalculateAsset()
+    }
+
+    /**
+     * 当账户余额变化时更新（兼容旧接口，现在直接重新计算）
      */
     suspend fun onAccountBalanceChanged(amountChange: Double) {
-        val existingBaseline = assetBaselineDao.getBaseline()
-        val currentMinuteTimestamp = getCurrentMinuteTimestamp()
+        recalculateAsset()
+    }
 
-        if (existingBaseline != null) {
-            // 计算当前应有的资产值
-            val fixedIncomes = fixedIncomeDao.getAllActiveFixedIncomes().first()
-            var netChangePerMinute = 0.0
-            fixedIncomes.forEach { entity ->
-                val perMinute = calculatePerMinute(entity.amount, entity.frequency)
-                if (entity.type == FixedIncomeType.INCOME) {
-                    netChangePerMinute += perMinute
-                } else {
-                    netChangePerMinute -= perMinute
-                }
-            }
-
-            val minutesElapsed = (currentMinuteTimestamp - existingBaseline.baselineTimestamp) / 60_000
-            val currentAsset = existingBaseline.baselineAmount + (netChangePerMinute * minutesElapsed)
-
-            // 加上账户变化
-            val newBaselineAmount = currentAsset + amountChange
-
-            // 保存新基准
-            val newBaseline = AssetBaselineEntity(
-                id = 1,
-                baselineTimestamp = currentMinuteTimestamp,
-                baselineAmount = newBaselineAmount
-            )
-            assetBaselineDao.insert(newBaseline)
-
-            // 更新状态
-            _realtimeAsset.value = _realtimeAsset.value.copy(
-                currentAsset = newBaselineAmount,
-                baselineTimestamp = currentMinuteTimestamp,
-                baselineAmount = newBaselineAmount
-            )
-        } else {
-            // 没有基准值，初始化
-            recalculateAsset()
-        }
+    /**
+     * 当固定收支的累计金额变化时重新计算资产
+     */
+    suspend fun onAccumulatedAmountChanged(
+        oldAccumulatedAmount: Double,
+        newAccumulatedAmount: Double,
+        isIncome: Boolean
+    ) {
+        recalculateAsset()
     }
 
     /**
@@ -249,4 +248,3 @@ class RealtimeAssetCalculator @Inject constructor(
         return calendar.timeInMillis
     }
 }
-

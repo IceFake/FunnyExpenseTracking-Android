@@ -202,6 +202,27 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- 累计金额输入 -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilAccumulatedAmount"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="累计金额（到目前为止的总收入/支出）"
+            app:prefixText="¥"
+            app:helperText="此金额会计入总资产"
+            app:helperTextEnabled="true">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etAccumulatedAmount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal"
+                android:textSize="16sp" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
         <!-- 保存按钮 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"

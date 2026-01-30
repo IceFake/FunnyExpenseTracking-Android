@@ -40,6 +40,7 @@ class FixedIncomeAdapter(
         private val tvFrequency: TextView = itemView.findViewById(R.id.tvFrequency)
         private val tvPerMinute: TextView = itemView.findViewById(R.id.tvPerMinute)
         private val tvAmount: TextView = itemView.findViewById(R.id.tvAmount)
+        private val tvAccumulatedAmount: TextView = itemView.findViewById(R.id.tvAccumulatedAmount)
         private val tvStatus: TextView = itemView.findViewById(R.id.tvStatus)
 
         fun bind(item: FixedIncome) {
@@ -69,6 +70,15 @@ class FixedIncomeAdapter(
             } else {
                 tvAmount.text = "-¥$formattedAmount"
                 tvAmount.setTextColor(itemView.context.getColor(android.R.color.holo_red_dark))
+            }
+
+            // 设置累计金额
+            if (item.accumulatedAmount > 0) {
+                tvAccumulatedAmount.visibility = View.VISIBLE
+                val formattedAccumulated = currencyFormat.format(item.accumulatedAmount)
+                tvAccumulatedAmount.text = "累计: ¥$formattedAccumulated"
+            } else {
+                tvAccumulatedAmount.visibility = View.GONE
             }
 
             // 设置状态

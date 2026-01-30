@@ -2,6 +2,8 @@ package com.example.funnyexpensetracking.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.funnyexpensetracking.data.local.AppDatabase
 import com.example.funnyexpensetracking.data.local.dao.*
 import dagger.Module
@@ -18,6 +20,17 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    /**
+     * 数据库版本3到4的迁移：为fixed_incomes表添加accumulatedAmount字段
+     */
+    private val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "ALTER TABLE fixed_incomes ADD COLUMN accumulatedAmount REAL NOT NULL DEFAULT 0.0"
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -26,6 +39,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "funny_expense_db"
         )
+            .addMigrations(MIGRATION_3_4)
             .fallbackToDestructiveMigration()
             .build()
     }

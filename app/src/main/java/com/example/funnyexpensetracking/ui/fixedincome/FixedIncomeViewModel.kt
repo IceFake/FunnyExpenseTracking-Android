@@ -120,7 +120,8 @@ class FixedIncomeViewModel @Inject constructor(
         amount: Double,
         type: FixedIncomeType,
         frequency: FixedIncomeFrequency,
-        startDate: Long
+        startDate: Long,
+        accumulatedAmount: Double = 0.0
     ) {
         viewModelScope.launch {
             try {
@@ -130,7 +131,8 @@ class FixedIncomeViewModel @Inject constructor(
                     type = type.toEntityType(),
                     frequency = frequency.toEntityFrequency(),
                     startDate = startDate,
-                    isActive = true
+                    isActive = true,
+                    accumulatedAmount = accumulatedAmount
                 )
                 fixedIncomeDao.insert(entity)
 
@@ -157,11 +159,15 @@ class FixedIncomeViewModel @Inject constructor(
         amount: Double,
         type: FixedIncomeType,
         frequency: FixedIncomeFrequency,
-        startDate: Long
+        startDate: Long,
+        accumulatedAmount: Double = 0.0
     ) {
         viewModelScope.launch {
             try {
                 val existingEntity = fixedIncomeDao.getById(id)
+                val oldAccumulatedAmount = existingEntity?.accumulatedAmount ?: 0.0
+                val isIncome = type == FixedIncomeType.INCOME
+
                 val entity = FixedIncomeEntity(
                     id = id,
                     name = name,
@@ -170,11 +176,21 @@ class FixedIncomeViewModel @Inject constructor(
                     frequency = frequency.toEntityFrequency(),
                     startDate = startDate,
                     isActive = existingEntity?.isActive ?: true,
+                    accumulatedAmount = accumulatedAmount,
                     createdAt = existingEntity?.createdAt ?: System.currentTimeMillis()
                 )
                 fixedIncomeDao.update(entity)
 
-                // 重新计算资产
+                // 如果累计金额发生变化，更新资产
+                if (oldAccumulatedAmount != accumulatedAmount) {
+                    realtimeAssetCalculator.onAccumulatedAmountChanged(
+                        oldAccumulatedAmount = oldAccumulatedAmount,
+                        newAccumulatedAmount = accumulatedAmount,
+                        isIncome = isIncome
+                    )
+                }
+
+                // 重新计算资产（固定收支其他参数变化也会影响每分钟变动率）
                 realtimeAssetCalculator.recalculateAsset()
 
                 hideAddDialog()
@@ -245,7 +261,8 @@ class FixedIncomeViewModel @Inject constructor(
             frequency = frequency.toDomainFrequency(),
             startDate = startDate,
             endDate = endDate,
-            isActive = isActive
+            isActive = isActive,
+            accumulatedAmount = accumulatedAmount
         )
     }
 

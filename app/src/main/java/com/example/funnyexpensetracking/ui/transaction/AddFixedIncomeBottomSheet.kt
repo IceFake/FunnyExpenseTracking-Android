@@ -28,7 +28,7 @@ import java.util.*
 class AddFixedIncomeBottomSheet(
     context: Context,
     private val editingFixedIncome: FixedIncome? = null,
-    private val onSave: (name: String, amount: Double, type: FixedIncomeType, frequency: FixedIncomeFrequency, startDate: Long) -> Unit,
+    private val onSave: (name: String, amount: Double, type: FixedIncomeType, frequency: FixedIncomeFrequency, startDate: Long, accumulatedAmount: Double) -> Unit,
     private val onDismiss: () -> Unit
 ) : BottomSheetDialog(context) {
 
@@ -63,6 +63,7 @@ class AddFixedIncomeBottomSheet(
         val chipGroupFrequency = view.findViewById<ChipGroup>(R.id.chipGroupFrequency)
         tvPerMinute = view.findViewById(R.id.tvPerMinute)
         val etStartDate = view.findViewById<TextInputEditText>(R.id.etStartDate)
+        val etAccumulatedAmount = view.findViewById<TextInputEditText>(R.id.etAccumulatedAmount)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSave)
 
         // 设置默认开始日期
@@ -128,7 +129,11 @@ class AddFixedIncomeBottomSheet(
             }
             tilAmount.error = null
 
-            onSave(name, amount, selectedType, selectedFrequency, selectedStartDate)
+            // 获取累计金额（默认为0）
+            val accumulatedAmountText = etAccumulatedAmount.text?.toString()
+            val accumulatedAmount = accumulatedAmountText?.toDoubleOrNull() ?: 0.0
+
+            onSave(name, amount, selectedType, selectedFrequency, selectedStartDate, accumulatedAmount)
             dismiss()
         }
 
@@ -175,6 +180,7 @@ class AddFixedIncomeBottomSheet(
         val etAmount = view.findViewById<TextInputEditText>(R.id.etAmount)
         val chipGroupFrequency = view.findViewById<ChipGroup>(R.id.chipGroupFrequency)
         val etStartDate = view.findViewById<TextInputEditText>(R.id.etStartDate)
+        val etAccumulatedAmount = view.findViewById<TextInputEditText>(R.id.etAccumulatedAmount)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSave)
 
         selectedType = fixedIncome.type
@@ -187,6 +193,11 @@ class AddFixedIncomeBottomSheet(
         // 设置名称和金额
         etName.setText(fixedIncome.name)
         etAmount.setText(fixedIncome.amount.toString())
+
+        // 设置累计金额
+        if (fixedIncome.accumulatedAmount > 0) {
+            etAccumulatedAmount.setText(fixedIncome.accumulatedAmount.toString())
+        }
 
         // 设置频率
         val frequencyChipId = when (fixedIncome.frequency) {

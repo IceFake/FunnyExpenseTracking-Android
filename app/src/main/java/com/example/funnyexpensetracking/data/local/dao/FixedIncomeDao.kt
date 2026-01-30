@@ -35,6 +35,24 @@ interface FixedIncomeDao {
     @Query("UPDATE fixed_incomes SET isActive = :isActive WHERE id = :id")
     suspend fun updateActiveStatus(id: Long, isActive: Boolean)
 
+    @Query("UPDATE fixed_incomes SET accumulatedAmount = accumulatedAmount + :amount WHERE id = :id")
+    suspend fun addToAccumulatedAmount(id: Long, amount: Double)
+
+    @Query("UPDATE fixed_incomes SET accumulatedAmount = :amount WHERE id = :id")
+    suspend fun setAccumulatedAmount(id: Long, amount: Double)
+
+    /**
+     * 获取所有固定收入的累计总额
+     */
+    @Query("SELECT COALESCE(SUM(accumulatedAmount), 0.0) FROM fixed_incomes WHERE type = 'INCOME'")
+    suspend fun getTotalAccumulatedIncome(): Double
+
+    /**
+     * 获取所有固定支出的累计总额
+     */
+    @Query("SELECT COALESCE(SUM(accumulatedAmount), 0.0) FROM fixed_incomes WHERE type = 'EXPENSE'")
+    suspend fun getTotalAccumulatedExpense(): Double
+
     @Query("DELETE FROM fixed_incomes")
     suspend fun deleteAll()
 }

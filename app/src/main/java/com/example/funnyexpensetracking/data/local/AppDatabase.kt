@@ -19,7 +19,7 @@ import com.example.funnyexpensetracking.data.local.entity.*
         SyncMetadataEntity::class,
         AssetBaselineEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

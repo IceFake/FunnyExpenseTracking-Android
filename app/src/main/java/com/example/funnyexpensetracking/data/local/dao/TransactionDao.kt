@@ -59,6 +59,25 @@ interface TransactionDao {
     @Query("SELECT DISTINCT category FROM transactions WHERE type = :type")
     suspend fun getCategoriesByType(type: TransactionType): List<String>
 
+    /**
+     * 获取所有普通收入的总额
+     */
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE type = 'INCOME' AND syncStatus != 'PENDING_DELETE'")
+    suspend fun getTotalIncome(): Double
+
+    /**
+     * 获取所有普通支出的总额
+     */
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE type = 'EXPENSE' AND syncStatus != 'PENDING_DELETE'")
+    suspend fun getTotalExpense(): Double
+
+    /**
+     * 获取普通收支净额（收入-支出）
+     */
+    suspend fun getNetTransactionAmount(): Double {
+        return getTotalIncome() - getTotalExpense()
+    }
+
     @Query("DELETE FROM transactions")
     suspend fun deleteAll()
 

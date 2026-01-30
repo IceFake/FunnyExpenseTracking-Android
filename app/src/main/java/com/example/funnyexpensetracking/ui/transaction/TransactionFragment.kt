@@ -230,8 +230,8 @@ class TransactionFragment : Fragment() {
 
         val dialog = AddFixedIncomeBottomSheet(
             context = requireContext(),
-            onSave = { name, amount, type, frequency, startDate ->
-                viewModel.addFixedIncome(name, amount, type, frequency, startDate)
+            onSave = { name, amount, type, frequency, startDate, accumulatedAmount ->
+                viewModel.addFixedIncome(name, amount, type, frequency, startDate, accumulatedAmount)
             },
             onDismiss = {
                 viewModel.hideAddFixedIncomeDialog()

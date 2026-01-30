@@ -291,8 +291,8 @@ class TransactionViewModel @Inject constructor(
                 val balanceChange = if (type == TransactionType.INCOME) amount else -amount
                 accountDao.updateBalance(accountId, balanceChange)
 
-                // 通知资产计算器账户余额变化
-                realtimeAssetCalculator.onAccountBalanceChanged(balanceChange)
+                // 通知资产计算器普通收支发生变化
+                realtimeAssetCalculator.onTransactionChanged()
 
                 hideAddDialog()
                 sendEvent(TransactionUiEvent.TransactionAdded)
@@ -338,8 +338,8 @@ class TransactionViewModel @Inject constructor(
                     val balanceChange = if (transaction.type == TransactionType.INCOME) -transaction.amount else transaction.amount
                     accountDao.updateBalance(transaction.accountId, balanceChange)
 
-                    // 通知资产计算器账户余额变化
-                    realtimeAssetCalculator.onAccountBalanceChanged(balanceChange)
+                    // 通知资产计算器普通收支发生变化
+                    realtimeAssetCalculator.onTransactionChanged()
 
                     sendEvent(TransactionUiEvent.TransactionDeleted)
                     sendEvent(TransactionUiEvent.ShowMessage("删除成功"))
@@ -403,6 +403,9 @@ class TransactionViewModel @Inject constructor(
                 // 更新新账户余额
                 val newBalanceChange = if (type == TransactionType.INCOME) amount else -amount
                 accountDao.updateBalance(accountId, newBalanceChange)
+
+                // 通知资产计算器普通收支发生变化
+                realtimeAssetCalculator.onTransactionChanged()
 
                 hideAddDialog()
                 sendEvent(TransactionUiEvent.TransactionUpdated)
@@ -470,7 +473,8 @@ class TransactionViewModel @Inject constructor(
         amount: Double,
         type: FixedIncomeType,
         frequency: FixedIncomeFrequency,
-        startDate: Long
+        startDate: Long,
+        accumulatedAmount: Double = 0.0
     ) {
         viewModelScope.launch {
             try {
@@ -480,7 +484,8 @@ class TransactionViewModel @Inject constructor(
                     type = type.toEntityType(),
                     frequency = frequency.toEntityFrequency(),
                     startDate = startDate,
-                    isActive = true
+                    isActive = true,
+                    accumulatedAmount = accumulatedAmount
                 )
                 fixedIncomeDao.insert(entity)
 

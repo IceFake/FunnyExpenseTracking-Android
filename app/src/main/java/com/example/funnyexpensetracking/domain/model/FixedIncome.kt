@@ -41,7 +41,8 @@ data class FixedIncome(
     val frequency: FixedIncomeFrequency,
     val startDate: Long,
     val endDate: Long? = null,
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val accumulatedAmount: Double = 0.0  // 累计收入/支出总额
 ) {
     /**
      * 计算每分钟的收益/支出金额
