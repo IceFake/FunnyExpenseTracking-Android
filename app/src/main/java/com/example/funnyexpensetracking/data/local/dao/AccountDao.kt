@@ -46,6 +46,17 @@ interface AccountDao {
         status: SyncStatus = SyncStatus.PENDING_UPLOAD
     )
 
+    /**
+     * 直接设置账户余额（用于手动调整账户金额）
+     */
+    @Query("UPDATE accounts SET balance = :balance, updatedAt = :updateTime, syncStatus = :status WHERE id = :accountId")
+    suspend fun setBalance(
+        accountId: Long,
+        balance: Double,
+        updateTime: Long = System.currentTimeMillis(),
+        status: SyncStatus = SyncStatus.PENDING_UPLOAD
+    )
+
     @Query("UPDATE accounts SET isDefault = 0, updatedAt = :updateTime, syncStatus = :status")
     suspend fun clearDefaultAccount(
         updateTime: Long = System.currentTimeMillis(),

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -14,9 +15,11 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.funnyexpensetracking.R
 import com.example.funnyexpensetracking.databinding.FragmentTransactionBinding
+import com.example.funnyexpensetracking.domain.model.Account
 import com.example.funnyexpensetracking.domain.model.Transaction
 import com.example.funnyexpensetracking.util.CurrencyUtil
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.card.MaterialCardView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -105,6 +108,9 @@ class TransactionFragment : Fragment() {
                     binding.tvTodayIncome.text = "+${CurrencyUtil.formatCurrency(state.todayIncome)}"
                     binding.tvTodayExpense.text = "-${CurrencyUtil.formatCurrency(state.todayExpense)}"
 
+                    // 更新账户列表
+                    updateAccountList(state.accounts)
+
                     // 更新列表
                     transactionAdapter.submitList(state.dailyTransactions)
 
@@ -134,6 +140,56 @@ class TransactionFragment : Fragment() {
                 }
             }
         }
+    }
+
+    /**
+     * 更新账户列表显示
+     */
+    private fun updateAccountList(accounts: List<Account>) {
+        binding.llAccountList.removeAllViews()
+
+        accounts.forEach { account ->
+            val cardView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.item_account_card, binding.llAccountList, false) as MaterialCardView
+
+            val tvAccountName = cardView.findViewById<TextView>(R.id.tvAccountName)
+            val tvAccountBalance = cardView.findViewById<TextView>(R.id.tvAccountBalance)
+
+            tvAccountName.text = account.name
+            tvAccountBalance.text = CurrencyUtil.formatCurrency(account.balance)
+
+            // 根据余额设置颜色
+            if (account.balance >= 0) {
+                tvAccountBalance.setTextColor(requireContext().getColor(android.R.color.black))
+            } else {
+                tvAccountBalance.setTextColor(requireContext().getColor(android.R.color.holo_red_dark))
+            }
+
+            // 点击编辑账户
+            cardView.setOnClickListener {
+                showEditAccountDialog(account)
+            }
+
+            binding.llAccountList.addView(cardView)
+        }
+
+        // 添加"添加账户"按钮
+        val addCardView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.item_account_card, binding.llAccountList, false) as MaterialCardView
+
+        val tvAddName = addCardView.findViewById<TextView>(R.id.tvAccountName)
+        val tvAddBalance = addCardView.findViewById<TextView>(R.id.tvAccountBalance)
+
+        tvAddName.text = "添加账户"
+        tvAddBalance.text = "+"
+        tvAddBalance.textSize = 24f
+        tvAddBalance.setTextColor(requireContext().getColor(com.google.android.material.R.color.design_default_color_primary))
+
+        addCardView.setOnClickListener {
+            viewModel.showAddAccountDialog()
+        }
+
+        binding.llAccountList.addView(addCardView)
     }
 
     private fun observeEvents() {
@@ -194,6 +250,9 @@ class TransactionFragment : Fragment() {
             onAddAccount = {
                 viewModel.showAddAccountDialog()
             },
+            onEditAccount = { account ->
+                showEditAccountDialog(account)
+            },
             onAddFixedIncome = {
                 viewModel.showAddFixedIncomeDialog()
             }
@@ -204,6 +263,7 @@ class TransactionFragment : Fragment() {
     }
 
     private var addAccountDialog: BottomSheetDialog? = null
+    private var editAccountDialog: BottomSheetDialog? = null
 
     private fun showAddAccountDialog() {
         if (addAccountDialog?.isShowing == true) return
@@ -220,6 +280,24 @@ class TransactionFragment : Fragment() {
         )
 
         addAccountDialog = dialog
+        dialog.show()
+    }
+
+    private fun showEditAccountDialog(account: com.example.funnyexpensetracking.domain.model.Account) {
+        if (editAccountDialog?.isShowing == true) return
+
+        val dialog = EditAccountBottomSheet(
+            context = requireContext(),
+            account = account,
+            onSave = { accountId, name, balance ->
+                viewModel.updateAccount(accountId, name, balance)
+            },
+            onDismiss = {
+                editAccountDialog = null
+            }
+        )
+
+        editAccountDialog = dialog
         dialog.show()
     }
 
@@ -258,6 +336,7 @@ class TransactionFragment : Fragment() {
         super.onDestroyView()
         addTransactionDialog?.dismiss()
         addAccountDialog?.dismiss()
+        editAccountDialog?.dismiss()
         addFixedIncomeDialog?.dismiss()
         _binding = null
     }

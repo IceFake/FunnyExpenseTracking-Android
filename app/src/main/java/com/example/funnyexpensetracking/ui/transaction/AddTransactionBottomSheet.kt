@@ -28,6 +28,7 @@ class AddTransactionBottomSheet(
     private val onSave: (amount: Double, type: TransactionType, category: String, accountId: Long, note: String, date: Long) -> Unit,
     private val onDismiss: () -> Unit,
     private val onAddAccount: () -> Unit,
+    private val onEditAccount: (Account) -> Unit = {},
     private val onAddFixedIncome: () -> Unit = {}
 ) : BottomSheetDialog(context) {
 
@@ -169,6 +170,11 @@ class AddTransactionBottomSheet(
                     if (isChecked) {
                         selectedAccountId = account.id
                     }
+                }
+                // 长按编辑账户
+                setOnLongClickListener {
+                    onEditAccount(account)
+                    true
                 }
             }
             chipGroup.addView(chip)

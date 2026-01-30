@@ -26,17 +26,16 @@ data class RealtimeAssetData(
     val netChangePerMinute: Double,     // 每分钟净变动
     val baselineTimestamp: Long,        // 基准时间
     val baselineAmount: Double,         // 基准金额
-    val totalTransactionIncome: Double = 0.0,    // 普通收入总额
-    val totalTransactionExpense: Double = 0.0,   // 普通支出总额
+    val totalAccountBalance: Double = 0.0,       // 各账户余额总和
     val totalFixedIncome: Double = 0.0,          // 固定收入累计总额
     val totalFixedExpense: Double = 0.0          // 固定支出累计总额
 )
 
 /**
  * 实时资产计算器
- * 负责根据普通收支和固定收支的累计值计算实时资产
+ * 负责根据账户余额和固定收支的累计值计算实时资产
  *
- * 总资产 = 普通收入总额 - 普通支出总额 + 固定收入累计总额 - 固定支出累计总额
+ * 总资产 = 各账户余额之和 + 固定收入累计总额 - 固定支出累计总额
  */
 @Singleton
 class RealtimeAssetCalculator @Inject constructor(
@@ -106,17 +105,15 @@ class RealtimeAssetCalculator @Inject constructor(
 
         val netChangePerMinute = incomePerMinute - expensePerMinute
 
-        // 获取普通收支总额
-        val totalTransactionIncome = transactionDao.getTotalIncome()
-        val totalTransactionExpense = transactionDao.getTotalExpense()
+        // 获取各账户余额总和
+        val totalAccountBalance = accountDao.getTotalBalance() ?: 0.0
 
         // 获取固定收支累计总额
         val totalFixedIncome = fixedIncomeDao.getTotalAccumulatedIncome()
         val totalFixedExpense = fixedIncomeDao.getTotalAccumulatedExpense()
 
-        // 计算当前资产 = 普通收入 - 普通支出 + 固定收入累计 - 固定支出累计
-        val currentAsset = totalTransactionIncome - totalTransactionExpense +
-                          totalFixedIncome - totalFixedExpense
+        // 计算当前资产 = 账户余额总和 + 固定收入累计 - 固定支出累计
+        val currentAsset = totalAccountBalance + totalFixedIncome - totalFixedExpense
 
         val currentMinuteTimestamp = getCurrentMinuteTimestamp()
 
@@ -127,8 +124,7 @@ class RealtimeAssetCalculator @Inject constructor(
             netChangePerMinute = netChangePerMinute,
             baselineTimestamp = currentMinuteTimestamp,
             baselineAmount = currentAsset,
-            totalTransactionIncome = totalTransactionIncome,
-            totalTransactionExpense = totalTransactionExpense,
+            totalAccountBalance = totalAccountBalance,
             totalFixedIncome = totalFixedIncome,
             totalFixedExpense = totalFixedExpense
         )
@@ -144,7 +140,7 @@ class RealtimeAssetCalculator @Inject constructor(
 
     /**
      * 重新计算资产（当收支变化时调用）
-     * 总资产 = 普通收入总额 - 普通支出总额 + 固定收入累计总额 - 固定支出累计总额
+     * 总资产 = 各账户余额之和 + 固定收入累计总额 - 固定支出累计总额
      */
     suspend fun recalculateAsset() {
         val fixedIncomes = fixedIncomeDao.getAllActiveFixedIncomes().first()
@@ -164,17 +160,15 @@ class RealtimeAssetCalculator @Inject constructor(
 
         val netChangePerMinute = incomePerMinute - expensePerMinute
 
-        // 获取普通收支总额
-        val totalTransactionIncome = transactionDao.getTotalIncome()
-        val totalTransactionExpense = transactionDao.getTotalExpense()
+        // 获取各账户余额总和
+        val totalAccountBalance = accountDao.getTotalBalance() ?: 0.0
 
         // 获取固定收支累计总额
         val totalFixedIncome = fixedIncomeDao.getTotalAccumulatedIncome()
         val totalFixedExpense = fixedIncomeDao.getTotalAccumulatedExpense()
 
-        // 计算当前资产 = 普通收入 - 普通支出 + 固定收入累计 - 固定支出累计
-        val currentAsset = totalTransactionIncome - totalTransactionExpense +
-                          totalFixedIncome - totalFixedExpense
+        // 计算当前资产 = 账户余额总和 + 固定收入累计 - 固定支出累计
+        val currentAsset = totalAccountBalance + totalFixedIncome - totalFixedExpense
 
         val currentMinuteTimestamp = getCurrentMinuteTimestamp()
 
@@ -194,8 +188,7 @@ class RealtimeAssetCalculator @Inject constructor(
             netChangePerMinute = netChangePerMinute,
             baselineTimestamp = currentMinuteTimestamp,
             baselineAmount = currentAsset,
-            totalTransactionIncome = totalTransactionIncome,
-            totalTransactionExpense = totalTransactionExpense,
+            totalAccountBalance = totalAccountBalance,
             totalFixedIncome = totalFixedIncome,
             totalFixedExpense = totalFixedExpense
         )

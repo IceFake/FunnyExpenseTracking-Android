@@ -89,6 +89,7 @@ sealed class TransactionUiEvent : UiEvent {
     object TransactionDeleted : TransactionUiEvent()
     object TransactionUpdated : TransactionUiEvent()
     object AccountAdded : TransactionUiEvent()
+    object AccountUpdated : TransactionUiEvent()
     object FixedIncomeAdded : TransactionUiEvent()
     object DismissDialog : TransactionUiEvent()
 }

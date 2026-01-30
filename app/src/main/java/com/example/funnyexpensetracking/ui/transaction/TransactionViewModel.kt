@@ -457,9 +457,58 @@ class TransactionViewModel @Inject constructor(
                     sortOrder = account.sortOrder
                 )
                 accountDao.delete(entity)
+
+                // 重新计算资产
+                realtimeAssetCalculator.recalculateAsset()
+
                 sendEvent(TransactionUiEvent.ShowMessage("账户删除成功"))
             } catch (e: Exception) {
                 sendEvent(TransactionUiEvent.ShowMessage("删除账户失败: ${e.message}"))
+            }
+        }
+    }
+
+    /**
+     * 更新账户（名称和余额）
+     */
+    fun updateAccount(accountId: Long, name: String, balance: Double) {
+        viewModelScope.launch {
+            try {
+                val existingAccount = accountDao.getById(accountId)
+                if (existingAccount != null) {
+                    val updatedEntity = existingAccount.copy(
+                        name = name,
+                        balance = balance,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                    accountDao.update(updatedEntity)
+
+                    // 重新计算资产
+                    realtimeAssetCalculator.recalculateAsset()
+
+                    sendEvent(TransactionUiEvent.AccountUpdated)
+                    sendEvent(TransactionUiEvent.ShowMessage("账户更新成功"))
+                }
+            } catch (e: Exception) {
+                sendEvent(TransactionUiEvent.ShowMessage("更新账户失败: ${e.message}"))
+            }
+        }
+    }
+
+    /**
+     * 直接设置账户余额
+     */
+    fun setAccountBalance(accountId: Long, balance: Double) {
+        viewModelScope.launch {
+            try {
+                accountDao.setBalance(accountId, balance)
+
+                // 重新计算资产
+                realtimeAssetCalculator.recalculateAsset()
+
+                sendEvent(TransactionUiEvent.ShowMessage("余额已更新"))
+            } catch (e: Exception) {
+                sendEvent(TransactionUiEvent.ShowMessage("更新余额失败: ${e.message}"))
             }
         }
     }
