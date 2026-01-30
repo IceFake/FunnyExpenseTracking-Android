@@ -182,7 +182,6 @@ class TransactionFragment : Fragment() {
 
         tvAddName.text = "添加账户"
         tvAddBalance.text = "+"
-        tvAddBalance.textSize = 24f
         tvAddBalance.setTextColor(requireContext().getColor(com.google.android.material.R.color.design_default_color_primary))
 
         addCardView.setOnClickListener {
