@@ -10,18 +10,16 @@ import com.example.funnyexpensetracking.ui.common.UiState
  * 历史账单页面状态
  */
 data class HistoryUiState(
-    // 交易记录列表（按日期分组）
-    val dailyTransactions: List<DailyTransactions> = emptyList(),
-    // 当前选中年份
-    val selectedYear: Int = 0,
-    // 当前选中月份
-    val selectedMonth: Int = 0,
-    // 本月收入
-    val monthIncome: Double = 0.0,
-    // 本月支出
-    val monthExpense: Double = 0.0,
-    // 本月结余
-    val monthBalance: Double = 0.0,
+    // 当天的交易记录列表
+    val transactions: List<com.example.funnyexpensetracking.domain.model.Transaction> = emptyList(),
+    // 当前选中的日期时间戳
+    val selectedDate: Long = 0L,
+    // 当天收入
+    val dayIncome: Double = 0.0,
+    // 当天支出
+    val dayExpense: Double = 0.0,
+    // 当天结余
+    val dayBalance: Double = 0.0,
     // 加载状态
     val loadingState: LoadingState = LoadingState.IDLE
 ) : UiState

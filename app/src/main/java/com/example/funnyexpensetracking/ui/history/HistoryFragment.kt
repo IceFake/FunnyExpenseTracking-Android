@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.funnyexpensetracking.R   
 import com.example.funnyexpensetracking.domain.model.Transaction
 import com.example.funnyexpensetracking.ui.common.LoadingState
-import com.example.funnyexpensetracking.ui.transaction.DailyTransactionAdapter
 import com.example.funnyexpensetracking.util.CurrencyUtil
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -27,21 +26,21 @@ import kotlinx.coroutines.launch
 import java.util.*
 
 /**
- * 历史账单Fragment - 显示按月/日期分组的账单明细
+ * 历史账单Fragment - 显示单日账单明细
  */
 @AndroidEntryPoint
 class HistoryFragment : Fragment() {
 
     private val viewModel: HistoryViewModel by viewModels()
-    private lateinit var transactionAdapter: DailyTransactionAdapter
+    private lateinit var transactionAdapter: TransactionAdapter
 
     // Views
-    private lateinit var btnPrevMonth: MaterialButton
-    private lateinit var btnNextMonth: MaterialButton
+    private lateinit var btnPrevDay: MaterialButton
+    private lateinit var btnNextDay: MaterialButton
     private lateinit var btnSelectDate: MaterialButton
-    private lateinit var tvMonthIncome: TextView
-    private lateinit var tvMonthExpense: TextView
-    private lateinit var tvMonthBalance: TextView
+    private lateinit var tvDayIncome: TextView
+    private lateinit var tvDayExpense: TextView
+    private lateinit var tvDayBalance: TextView
     private lateinit var rvTransactions: RecyclerView
     private lateinit var emptyView: View
 
@@ -63,18 +62,18 @@ class HistoryFragment : Fragment() {
     }
 
     private fun initViews(view: View) {
-        btnPrevMonth = view.findViewById(R.id.btnPrevMonth)
-        btnNextMonth = view.findViewById(R.id.btnNextMonth)
+        btnPrevDay = view.findViewById(R.id.btnPrevMonth)
+        btnNextDay = view.findViewById(R.id.btnNextMonth)
         btnSelectDate = view.findViewById(R.id.btnSelectDate)
-        tvMonthIncome = view.findViewById(R.id.tvMonthIncome)
-        tvMonthExpense = view.findViewById(R.id.tvMonthExpense)
-        tvMonthBalance = view.findViewById(R.id.tvMonthBalance)
+        tvDayIncome = view.findViewById(R.id.tvMonthIncome)
+        tvDayExpense = view.findViewById(R.id.tvMonthExpense)
+        tvDayBalance = view.findViewById(R.id.tvMonthBalance)
         rvTransactions = view.findViewById(R.id.rvTransactions)
         emptyView = view.findViewById(R.id.emptyView)
     }
 
     private fun setupRecyclerView() {
-        transactionAdapter = DailyTransactionAdapter(
+        transactionAdapter = TransactionAdapter(
             onTransactionClick = { transaction ->
                 showTransactionDetailDialog(transaction)
             },
@@ -90,16 +89,16 @@ class HistoryFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        btnPrevMonth.setOnClickListener {
-            viewModel.selectPreviousMonth()
+        btnPrevDay.setOnClickListener {
+            viewModel.selectPreviousDay()
         }
 
-        btnNextMonth.setOnClickListener {
-            viewModel.selectNextMonth()
+        btnNextDay.setOnClickListener {
+            viewModel.selectNextDay()
         }
 
         btnSelectDate.setOnClickListener {
-            showMonthPickerDialog()
+            showDatePickerDialog()
         }
     }
 
@@ -107,32 +106,32 @@ class HistoryFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collectLatest { state ->
-                    // 更新月份显示
-                    btnSelectDate.text = viewModel.getDisplayMonth()
+                    // 更新日期显示
+                    btnSelectDate.text = viewModel.getDisplayDate()
 
-                    // 更新月度统计
-                    tvMonthIncome.text = "+${CurrencyUtil.formatCurrency(state.monthIncome)}"
-                    tvMonthExpense.text = "-${CurrencyUtil.formatCurrency(state.monthExpense)}"
+                    // 更新当天统计
+                    tvDayIncome.text = "+${CurrencyUtil.formatCurrency(state.dayIncome)}"
+                    tvDayExpense.text = "-${CurrencyUtil.formatCurrency(state.dayExpense)}"
 
                     // 结余颜色根据正负变化
-                    val balanceText = if (state.monthBalance >= 0) {
-                        "+${CurrencyUtil.formatCurrency(state.monthBalance)}"
+                    val balanceText = if (state.dayBalance >= 0) {
+                        "+${CurrencyUtil.formatCurrency(state.dayBalance)}"
                     } else {
-                        "-${CurrencyUtil.formatCurrency(-state.monthBalance)}"
+                        "-${CurrencyUtil.formatCurrency(-state.dayBalance)}"
                     }
-                    tvMonthBalance.text = balanceText
-                    tvMonthBalance.setTextColor(
-                        if (state.monthBalance >= 0)
+                    tvDayBalance.text = balanceText
+                    tvDayBalance.setTextColor(
+                        if (state.dayBalance >= 0)
                             requireContext().getColor(android.R.color.holo_green_dark)
                         else
                             requireContext().getColor(android.R.color.holo_red_dark)
                     )
 
                     // 更新列表
-                    transactionAdapter.submitList(state.dailyTransactions)
+                    transactionAdapter.submitList(state.transactions)
 
                     // 显示/隐藏空状态
-                    if (state.dailyTransactions.isEmpty() && state.loadingState != LoadingState.LOADING) {
+                    if (state.transactions.isEmpty() && state.loadingState != LoadingState.LOADING) {
                         rvTransactions.visibility = View.GONE
                         emptyView.visibility = View.VISIBLE
                     } else {
@@ -165,32 +164,22 @@ class HistoryFragment : Fragment() {
     }
 
     /**
-     * 显示月份选择器
+     * 显示日期选择器
      */
-    private fun showMonthPickerDialog() {
+    private fun showDatePickerDialog() {
         val state = viewModel.uiState.value
-        val currentYear = state.selectedYear
-        val currentMonth = state.selectedMonth
-
-        // 使用DatePickerDialog，只选择年月
         val calendar = Calendar.getInstance()
-        calendar.set(Calendar.YEAR, currentYear)
-        calendar.set(Calendar.MONTH, currentMonth - 1)
+        calendar.timeInMillis = state.selectedDate
 
         DatePickerDialog(
             requireContext(),
-            { _, year, month, _ ->
-                viewModel.selectMonth(year, month + 1)
+            { _, year, month, dayOfMonth ->
+                viewModel.selectDate(year, month + 1, dayOfMonth)
             },
-            currentYear,
-            currentMonth - 1,
-            1
-        ).apply {
-            // 隐藏日期选择
-            datePicker.findViewById<View>(
-                resources.getIdentifier("day", "id", "android")
-            )?.visibility = View.GONE
-        }.show()
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
     }
 
     /**

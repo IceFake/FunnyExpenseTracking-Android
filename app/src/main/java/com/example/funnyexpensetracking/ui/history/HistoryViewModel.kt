@@ -27,15 +27,10 @@ class HistoryViewModel @Inject constructor(
     private val accountDao: AccountDao
 ) : BaseViewModel<HistoryUiState, HistoryUiEvent>() {
 
-    private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
-    private val dayOfWeekFormat = SimpleDateFormat("EEEE", Locale.CHINA)
-
     override fun initialState(): HistoryUiState {
-        val year = DateTimeUtil.getCurrentYear()
-        val month = DateTimeUtil.getCurrentMonth()
+        val today = DateTimeUtil.getTodayStartTimestamp()
         return HistoryUiState(
-            selectedYear = year,
-            selectedMonth = month
+            selectedDate = today
         )
     }
 
@@ -49,10 +44,9 @@ class HistoryViewModel @Inject constructor(
     private fun loadData() {
         updateState { copy(loadingState = LoadingState.LOADING) }
 
-        val year = currentState().selectedYear
-        val month = currentState().selectedMonth
-        val startTimestamp = DateTimeUtil.getMonthStartTimestamp(year, month)
-        val endTimestamp = DateTimeUtil.getMonthEndTimestamp(year, month)
+        val selectedDate = currentState().selectedDate
+        val startTimestamp = selectedDate // 当天0点
+        val endTimestamp = selectedDate + 24 * 60 * 60 * 1000 - 1 // 当天23:59:59
 
         transactionDao.getTransactionsByDateRange(startTimestamp, endTimestamp)
             .onEach { transactionEntities: List<TransactionEntity> ->
@@ -64,21 +58,18 @@ class HistoryViewModel @Inject constructor(
                         // 转换为领域模型
                         val transactions = transactionEntities.map { entity ->
                             entity.toDomainModel(accountMap[entity.accountId]?.name ?: "未知账户")
-                        }
+                        }.sortedByDescending { it.createdAt }
 
-                        // 按日期分组
-                        val dailyTransactions = groupTransactionsByDate(transactions)
-
-                        // 计算月度统计
-                        val monthIncome = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-                        val monthExpense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+                        // 计算当天统计
+                        val dayIncome = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                        val dayExpense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
 
                         updateState {
                             copy(
-                                dailyTransactions = dailyTransactions,
-                                monthIncome = monthIncome,
-                                monthExpense = monthExpense,
-                                monthBalance = monthIncome - monthExpense,
+                                transactions = transactions,
+                                dayIncome = dayIncome,
+                                dayExpense = dayExpense,
+                                dayBalance = dayIncome - dayExpense,
                                 loadingState = LoadingState.SUCCESS
                             )
                         }
@@ -108,100 +99,57 @@ class HistoryViewModel @Inject constructor(
     }
 
     /**
-     * 按日期分组交易记录
+     * 选择上一天
      */
-    private fun groupTransactionsByDate(transactions: List<Transaction>): List<DailyTransactions> {
-        return transactions
-            .groupBy { getDateOnly(it.date) }
-            .map { (dateTimestamp, transactionList) ->
-                DailyTransactions(
-                    date = dateTimestamp,
-                    dateString = dateFormat.format(Date(dateTimestamp)),
-                    dayOfWeek = dayOfWeekFormat.format(Date(dateTimestamp)),
-                    totalIncome = transactionList.filter { it.type == TransactionType.INCOME }.sumOf { it.amount },
-                    totalExpense = transactionList.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount },
-                    transactions = transactionList.sortedByDescending { it.createdAt }
-                )
-            }
-            .sortedByDescending { it.date }
+    fun selectPreviousDay() {
+        val currentDate = currentState().selectedDate
+        val previousDay = currentDate - 24 * 60 * 60 * 1000
+
+        updateState {
+            copy(selectedDate = previousDay)
+        }
+        loadData()
     }
 
     /**
-     * 获取日期的0点时间戳
+     * 选择下一天
      */
-    private fun getDateOnly(timestamp: Long): Long {
+    fun selectNextDay() {
+        val currentDate = currentState().selectedDate
+        val nextDay = currentDate + 24 * 60 * 60 * 1000
+
+        updateState {
+            copy(selectedDate = nextDay)
+        }
+        loadData()
+    }
+
+    /**
+     * 选择指定日期
+     */
+    fun selectDate(year: Int, month: Int, day: Int) {
         val calendar = Calendar.getInstance()
-        calendar.timeInMillis = timestamp
+        calendar.set(Calendar.YEAR, year)
+        calendar.set(Calendar.MONTH, month - 1)
+        calendar.set(Calendar.DAY_OF_MONTH, day)
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
-        return calendar.timeInMillis
-    }
-
-    /**
-     * 选择上一个月
-     */
-    fun selectPreviousMonth() {
-        val currentYear = currentState().selectedYear
-        val currentMonth = currentState().selectedMonth
-
-        val newYear: Int
-        val newMonth: Int
-        if (currentMonth == 1) {
-            newYear = currentYear - 1
-            newMonth = 12
-        } else {
-            newYear = currentYear
-            newMonth = currentMonth - 1
-        }
 
         updateState {
-            copy(selectedYear = newYear, selectedMonth = newMonth)
+            copy(selectedDate = calendar.timeInMillis)
         }
         loadData()
     }
 
     /**
-     * 选择下一个月
+     * 获取显示的日期字符串
      */
-    fun selectNextMonth() {
-        val currentYear = currentState().selectedYear
-        val currentMonth = currentState().selectedMonth
-
-        val newYear: Int
-        val newMonth: Int
-        if (currentMonth == 12) {
-            newYear = currentYear + 1
-            newMonth = 1
-        } else {
-            newYear = currentYear
-            newMonth = currentMonth + 1
-        }
-
-        updateState {
-            copy(selectedYear = newYear, selectedMonth = newMonth)
-        }
-        loadData()
-    }
-
-    /**
-     * 选择指定月份
-     */
-    fun selectMonth(year: Int, month: Int) {
-        updateState {
-            copy(selectedYear = year, selectedMonth = month)
-        }
-        loadData()
-    }
-
-    /**
-     * 获取显示的月份字符串
-     */
-    fun getDisplayMonth(): String {
-        val year = currentState().selectedYear
-        val month = currentState().selectedMonth
-        return "${year}年${String.format("%02d", month)}月"
+    fun getDisplayDate(): String {
+        val date = Date(currentState().selectedDate)
+        val dateFormat = SimpleDateFormat("yyyy年MM月dd日 EEEE", Locale.CHINA)
+        return dateFormat.format(date)
     }
 
     /**

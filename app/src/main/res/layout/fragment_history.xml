@@ -75,7 +75,7 @@
 
         </com.google.android.material.appbar.AppBarLayout>
 
-        <!-- 月度统计卡片 -->
+        <!-- 日度统计卡片 -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -99,7 +99,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="收入"
+                        android:text="当日收入"
                         android:textColor="#666666"
                         android:textSize="12sp" />
 
@@ -129,7 +129,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="支出"
+                        android:text="当日支出"
                         android:textColor="#666666"
                         android:textSize="12sp" />
 
@@ -159,7 +159,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="结余"
+                        android:text="当日结余"
                         android:textColor="#666666"
                         android:textSize="12sp" />
 
@@ -186,7 +186,7 @@
             android:clipToPadding="false"
             android:paddingHorizontal="16dp"
             android:paddingBottom="16dp"
-            tools:listitem="@layout/item_daily_transactions" />
+            tools:listitem="@layout/item_transaction" />
 
         <!-- 空状态 -->
         <LinearLayout
@@ -207,7 +207,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="该月暂无账单记录"
+                android:text="当天暂无账单记录"
                 android:textSize="16sp"
                 android:textColor="#999999"
                 android:layout_marginTop="8dp" />
