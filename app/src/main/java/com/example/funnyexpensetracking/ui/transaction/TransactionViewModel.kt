@@ -144,9 +144,13 @@ class TransactionViewModel @Inject constructor(
     private fun loadData() {
         updateState { copy(loadingState = LoadingState.LOADING) }
 
-        // 组合账户和交易数据
+        // 获取今天的时间范围
+        val todayStart = DateTimeUtil.getTodayStartTimestamp()
+        val todayEnd = DateTimeUtil.getTodayEndTimestamp()
+
+        // 组合账户和交易数据（只获取今日数据用于首页显示）
         combine(
-            transactionDao.getAllTransactions(),
+            transactionDao.getTransactionsByDateRange(todayStart, todayEnd),
             accountDao.getAllAccounts()
         ) { transactions, accounts ->
             Pair(transactions, accounts)
@@ -159,15 +163,12 @@ class TransactionViewModel @Inject constructor(
                 entity.toDomainModel(accountMap[entity.accountId]?.name ?: "未知账户")
             }
 
-            // 按日期分组
+            // 按日期分组（首页只显示今日）
             val dailyTransactions = groupTransactionsByDate(transactions)
 
             // 计算今日收支
-            val today = DateTimeUtil.getTodayStartTimestamp()
-            val todayEnd = DateTimeUtil.getTodayEndTimestamp()
-            val todayTransactions = transactions.filter { it.date in today..todayEnd }
-            val todayIncome = todayTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-            val todayExpense = todayTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+            val todayIncome = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+            val todayExpense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
 
             // 计算总余额
             val totalBalance = accountEntities.sumOf { it.balance }

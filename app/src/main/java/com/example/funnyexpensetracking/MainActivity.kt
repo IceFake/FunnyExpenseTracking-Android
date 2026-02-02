@@ -5,36 +5,114 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.fragment.app.Fragment
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.funnyexpensetracking.ui.fixedincome.FixedIncomeFragment
+import com.example.funnyexpensetracking.ui.history.HistoryFragment
 import com.example.funnyexpensetracking.ui.transaction.TransactionFragment
 import com.example.funnyexpensetracking.worker.AssetSnapshotWorker
 import com.example.funnyexpensetracking.worker.StockPriceSyncWorker
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var bottomNavigation: BottomNavigationView
+
+    // 缓存 Fragment 实例
+    private var transactionFragment: TransactionFragment? = null
+    private var historyFragment: HistoryFragment? = null
+    private var fixedIncomeFragment: FixedIncomeFragment? = null
+    private var activeFragment: Fragment? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0)
             insets
         }
 
-        // 加载TransactionFragment
+        bottomNavigation = findViewById(R.id.bottomNavigation)
+        setupBottomNavigation()
+
+        // 加载默认Fragment
         if (savedInstanceState == null) {
+            transactionFragment = TransactionFragment()
+            activeFragment = transactionFragment
             supportFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, TransactionFragment())
+                .add(R.id.fragmentContainer, transactionFragment!!, "home")
                 .commit()
         }
 
         // 初始化后台任务
         setupWorkers()
+    }
+
+    private fun setupBottomNavigation() {
+        bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> {
+                    switchFragment(getOrCreateTransactionFragment())
+                    true
+                }
+                R.id.nav_history -> {
+                    switchFragment(getOrCreateHistoryFragment())
+                    true
+                }
+                R.id.nav_fixed -> {
+                    switchFragment(getOrCreateFixedIncomeFragment())
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun getOrCreateTransactionFragment(): Fragment {
+        if (transactionFragment == null) {
+            transactionFragment = TransactionFragment()
+        }
+        return transactionFragment!!
+    }
+
+    private fun getOrCreateHistoryFragment(): Fragment {
+        if (historyFragment == null) {
+            historyFragment = HistoryFragment()
+        }
+        return historyFragment!!
+    }
+
+    private fun getOrCreateFixedIncomeFragment(): Fragment {
+        if (fixedIncomeFragment == null) {
+            fixedIncomeFragment = FixedIncomeFragment()
+        }
+        return fixedIncomeFragment!!
+    }
+
+    private fun switchFragment(targetFragment: Fragment) {
+        if (activeFragment === targetFragment) return
+
+        val transaction = supportFragmentManager.beginTransaction()
+
+        // 隐藏当前 Fragment
+        activeFragment?.let { transaction.hide(it) }
+
+        // 显示目标 Fragment
+        if (targetFragment.isAdded) {
+            transaction.show(targetFragment)
+        } else {
+            transaction.add(R.id.fragmentContainer, targetFragment)
+        }
+
+        transaction.commit()
+        activeFragment = targetFragment
     }
 
     /**
