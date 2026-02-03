@@ -31,6 +31,29 @@ object DatabaseModule {
         }
     }
 
+    /**
+     * 数据库版本4到5的迁移：添加investments表
+     */
+    private val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS investments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    category TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    quantity REAL NOT NULL DEFAULT 0.0,
+                    investment REAL NOT NULL,
+                    currentPrice REAL NOT NULL DEFAULT 0.0,
+                    currentValue REAL NOT NULL DEFAULT 0.0,
+                    createdAt INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -39,7 +62,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "funny_expense_db"
         )
-            .addMigrations(MIGRATION_3_4)
+            .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -84,6 +107,12 @@ object DatabaseModule {
     @Singleton
     fun provideAssetBaselineDao(database: AppDatabase): AssetBaselineDao {
         return database.assetBaselineDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideInvestmentDao(database: AppDatabase): InvestmentDao {
+        return database.investmentDao()
     }
 }
 

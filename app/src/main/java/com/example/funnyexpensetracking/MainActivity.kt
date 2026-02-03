@@ -11,6 +11,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.funnyexpensetracking.ui.calendar.CalendarFragment
 import com.example.funnyexpensetracking.ui.fixedincome.FixedIncomeFragment
+import com.example.funnyexpensetracking.ui.investment.InvestmentFragment
 import com.example.funnyexpensetracking.ui.transaction.TransactionFragment
 import com.example.funnyexpensetracking.ui.usercenter.UserCenterFragment
 import com.example.funnyexpensetracking.worker.AssetSnapshotWorker
@@ -28,6 +29,7 @@ class MainActivity : AppCompatActivity() {
     private var transactionFragment: TransactionFragment? = null
     private var calendarFragment: CalendarFragment? = null
     private var fixedIncomeFragment: FixedIncomeFragment? = null
+    private var investmentFragment: InvestmentFragment? = null
     private var userCenterFragment: UserCenterFragment? = null
     private var activeFragment: Fragment? = null
 
@@ -72,6 +74,10 @@ class MainActivity : AppCompatActivity() {
                     switchFragment(getOrCreateFixedIncomeFragment())
                     true
                 }
+                R.id.nav_investment -> {
+                    switchFragment(getOrCreateInvestmentFragment())
+                    true
+                }
                 R.id.nav_user_center -> {
                     switchFragment(getOrCreateUserCenterFragment())
                     true
@@ -101,6 +107,13 @@ class MainActivity : AppCompatActivity() {
             fixedIncomeFragment = FixedIncomeFragment()
         }
         return fixedIncomeFragment!!
+    }
+
+    private fun getOrCreateInvestmentFragment(): Fragment {
+        if (investmentFragment == null) {
+            investmentFragment = InvestmentFragment()
+        }
+        return investmentFragment!!
     }
 
     private fun getOrCreateUserCenterFragment(): Fragment {

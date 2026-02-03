@@ -35,5 +35,12 @@ class Converters {
 
     @TypeConverter
     fun toFixedIncomeFrequency(value: String): FixedIncomeFrequency = FixedIncomeFrequency.valueOf(value)
+
+    // ========== InvestmentCategory 转换 ==========
+    @TypeConverter
+    fun fromInvestmentCategory(category: InvestmentCategory): String = category.name
+
+    @TypeConverter
+    fun toInvestmentCategory(value: String): InvestmentCategory = InvestmentCategory.valueOf(value)
 }
 
