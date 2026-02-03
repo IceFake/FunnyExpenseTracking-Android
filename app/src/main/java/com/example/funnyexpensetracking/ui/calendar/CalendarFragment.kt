@@ -137,10 +137,13 @@ class CalendarFragment : Fragment() {
                             Toast.makeText(requireContext(), event.message, Toast.LENGTH_SHORT).show()
                         }
                         is CalendarUiEvent.NavigateToDay -> {
-                            // 提示用户点击的日期
-                            val message = "${event.year}年${event.month}月${event.day}日"
-                            Toast.makeText(requireContext(), "查看 $message 的账单", Toast.LENGTH_SHORT).show()
-                            // 可以通过共享ViewModel或EventBus传递日期给HistoryFragment
+                            // 弹出日期明细BottomSheet
+                            val bottomSheet = DayDetailBottomSheet.newInstance(
+                                event.year,
+                                event.month,
+                                event.day
+                            )
+                            bottomSheet.show(childFragmentManager, "DayDetailBottomSheet")
                         }
                     }
                 }

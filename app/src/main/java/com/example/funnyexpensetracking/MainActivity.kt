@@ -11,7 +11,6 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.funnyexpensetracking.ui.calendar.CalendarFragment
 import com.example.funnyexpensetracking.ui.fixedincome.FixedIncomeFragment
-import com.example.funnyexpensetracking.ui.history.HistoryFragment
 import com.example.funnyexpensetracking.ui.transaction.TransactionFragment
 import com.example.funnyexpensetracking.ui.usercenter.UserCenterFragment
 import com.example.funnyexpensetracking.worker.AssetSnapshotWorker
@@ -28,7 +27,6 @@ class MainActivity : AppCompatActivity() {
     // 缓存 Fragment 实例
     private var transactionFragment: TransactionFragment? = null
     private var calendarFragment: CalendarFragment? = null
-    private var historyFragment: HistoryFragment? = null
     private var fixedIncomeFragment: FixedIncomeFragment? = null
     private var userCenterFragment: UserCenterFragment? = null
     private var activeFragment: Fragment? = null
@@ -70,10 +68,6 @@ class MainActivity : AppCompatActivity() {
                     switchFragment(getOrCreateCalendarFragment())
                     true
                 }
-                R.id.nav_history -> {
-                    switchFragment(getOrCreateHistoryFragment())
-                    true
-                }
                 R.id.nav_fixed -> {
                     switchFragment(getOrCreateFixedIncomeFragment())
                     true
@@ -101,12 +95,6 @@ class MainActivity : AppCompatActivity() {
         return calendarFragment!!
     }
 
-    private fun getOrCreateHistoryFragment(): Fragment {
-        if (historyFragment == null) {
-            historyFragment = HistoryFragment()
-        }
-        return historyFragment!!
-    }
 
     private fun getOrCreateFixedIncomeFragment(): Fragment {
         if (fixedIncomeFragment == null) {
