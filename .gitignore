@@ -13,3 +13,11 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Signing files - DO NOT COMMIT
+*.jks
+*.keystore
+release-key-base64.txt
+app/release-key.jks
+app/release-key-base64.txt
+
