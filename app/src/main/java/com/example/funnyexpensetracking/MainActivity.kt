@@ -13,6 +13,7 @@ import com.example.funnyexpensetracking.ui.calendar.CalendarFragment
 import com.example.funnyexpensetracking.ui.fixedincome.FixedIncomeFragment
 import com.example.funnyexpensetracking.ui.history.HistoryFragment
 import com.example.funnyexpensetracking.ui.transaction.TransactionFragment
+import com.example.funnyexpensetracking.ui.usercenter.UserCenterFragment
 import com.example.funnyexpensetracking.worker.AssetSnapshotWorker
 import com.example.funnyexpensetracking.worker.StockPriceSyncWorker
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -29,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private var calendarFragment: CalendarFragment? = null
     private var historyFragment: HistoryFragment? = null
     private var fixedIncomeFragment: FixedIncomeFragment? = null
+    private var userCenterFragment: UserCenterFragment? = null
     private var activeFragment: Fragment? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +78,10 @@ class MainActivity : AppCompatActivity() {
                     switchFragment(getOrCreateFixedIncomeFragment())
                     true
                 }
+                R.id.nav_user_center -> {
+                    switchFragment(getOrCreateUserCenterFragment())
+                    true
+                }
                 else -> false
             }
         }
@@ -107,6 +113,13 @@ class MainActivity : AppCompatActivity() {
             fixedIncomeFragment = FixedIncomeFragment()
         }
         return fixedIncomeFragment!!
+    }
+
+    private fun getOrCreateUserCenterFragment(): Fragment {
+        if (userCenterFragment == null) {
+            userCenterFragment = UserCenterFragment()
+        }
+        return userCenterFragment!!
     }
 
     private fun switchFragment(targetFragment: Fragment) {
