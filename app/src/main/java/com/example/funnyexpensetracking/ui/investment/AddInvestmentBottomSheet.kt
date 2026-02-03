@@ -55,6 +55,10 @@ class AddInvestmentBottomSheet(
             binding.spinnerCategory.setText(categories[categoryIndex], false)
             updateUIForCategory(investment.category)
 
+            // 编辑模式下禁止修改分类
+            binding.spinnerCategory.isEnabled = false
+            binding.tilCategory.isEnabled = false
+
             binding.etDescription.setText(investment.description)
             binding.etQuantity.setText(investment.quantity.toString())
             binding.etInvestment.setText(investment.investment.toString())
