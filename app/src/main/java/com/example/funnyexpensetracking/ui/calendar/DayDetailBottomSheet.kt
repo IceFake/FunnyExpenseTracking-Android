@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -15,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.funnyexpensetracking.R
 import com.example.funnyexpensetracking.domain.model.Transaction
 import com.example.funnyexpensetracking.ui.history.TransactionAdapter
+import com.example.funnyexpensetracking.ui.transaction.AddTransactionBottomSheet
 import com.example.funnyexpensetracking.util.CurrencyUtil
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -117,38 +119,50 @@ class DayDetailBottomSheet : BottomSheetDialogFragment() {
     private fun observeState() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collectLatest { state ->
-                    // 更新日期标题
-                    tvDateTitle.text = formatDate(state.year, state.month, state.day)
+                launch {
+                    viewModel.uiState.collectLatest { state ->
+                        // 更新日期标题
+                        tvDateTitle.text = formatDate(state.year, state.month, state.day)
 
-                    // 更新统计
-                    tvDayIncome.text = "+${CurrencyUtil.formatCurrency(state.dayIncome)}"
-                    tvDayExpense.text = "-${CurrencyUtil.formatCurrency(state.dayExpense)}"
+                        // 更新统计
+                        tvDayIncome.text = "+${CurrencyUtil.formatCurrency(state.dayIncome)}"
+                        tvDayExpense.text = "-${CurrencyUtil.formatCurrency(state.dayExpense)}"
 
-                    // 结余颜色
-                    val balanceText = if (state.dayBalance >= 0) {
-                        "+${CurrencyUtil.formatCurrency(state.dayBalance)}"
-                    } else {
-                        CurrencyUtil.formatCurrency(state.dayBalance)
+                        // 结余颜色
+                        val balanceText = if (state.dayBalance >= 0) {
+                            "+${CurrencyUtil.formatCurrency(state.dayBalance)}"
+                        } else {
+                            CurrencyUtil.formatCurrency(state.dayBalance)
+                        }
+                        tvDayBalance.text = balanceText
+                        tvDayBalance.setTextColor(
+                            if (state.dayBalance >= 0)
+                                requireContext().getColor(android.R.color.holo_green_dark)
+                            else
+                                requireContext().getColor(android.R.color.holo_red_dark)
+                        )
+
+                        // 更新列表
+                        transactionAdapter.submitList(state.transactions)
+
+                        // 显示/隐藏空状态
+                        if (state.transactions.isEmpty()) {
+                            rvTransactions.visibility = View.GONE
+                            emptyView.visibility = View.VISIBLE
+                        } else {
+                            rvTransactions.visibility = View.VISIBLE
+                            emptyView.visibility = View.GONE
+                        }
                     }
-                    tvDayBalance.text = balanceText
-                    tvDayBalance.setTextColor(
-                        if (state.dayBalance >= 0)
-                            requireContext().getColor(android.R.color.holo_green_dark)
-                        else
-                            requireContext().getColor(android.R.color.holo_red_dark)
-                    )
+                }
 
-                    // 更新列表
-                    transactionAdapter.submitList(state.transactions)
-
-                    // 显示/隐藏空状态
-                    if (state.transactions.isEmpty()) {
-                        rvTransactions.visibility = View.GONE
-                        emptyView.visibility = View.VISIBLE
-                    } else {
-                        rvTransactions.visibility = View.VISIBLE
-                        emptyView.visibility = View.GONE
+                launch {
+                    viewModel.uiEvent.collectLatest { event ->
+                        when (event) {
+                            is DayDetailUiEvent.ShowMessage -> {
+                                Toast.makeText(requireContext(), event.message, Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 }
             }
@@ -163,21 +177,47 @@ class DayDetailBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun showTransactionDetailDialog(transaction: Transaction) {
-        val message = buildString {
-            appendLine("分类：${transaction.category}")
-            appendLine("金额：${CurrencyUtil.formatCurrency(transaction.amount)}")
-            appendLine("账户：${transaction.accountName}")
-            if (transaction.note.isNotEmpty()) {
-                appendLine("备注：${transaction.note}")
-            }
-            appendLine("时间：${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(transaction.createdAt))}")
-        }
+        val options = arrayOf("编辑", "删除")
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("交易详情")
-            .setMessage(message)
-            .setPositiveButton("确定", null)
+            .setTitle(transaction.category)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showEditTransactionDialog(transaction)
+                    1 -> showDeleteConfirmDialog(transaction)
+                }
+            }
             .show()
+    }
+
+    private fun showEditTransactionDialog(transaction: Transaction) {
+        val accounts = viewModel.accounts.value
+        if (accounts.isEmpty()) {
+            Toast.makeText(requireContext(), "请先添加账户", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val dialog = AddTransactionBottomSheet(
+            context = requireContext(),
+            accounts = accounts,
+            editingTransaction = transaction,
+            onSave = { amount, type, category, accountId, note, date ->
+                viewModel.updateTransaction(
+                    id = transaction.id,
+                    amount = amount,
+                    type = type,
+                    category = category,
+                    accountId = accountId,
+                    note = note,
+                    date = date
+                )
+            },
+            onDismiss = {},
+            onAddAccount = {
+                Toast.makeText(requireContext(), "请在首页添加账户", Toast.LENGTH_SHORT).show()
+            }
+        )
+        dialog.show()
     }
 
     private fun showDeleteConfirmDialog(transaction: Transaction) {

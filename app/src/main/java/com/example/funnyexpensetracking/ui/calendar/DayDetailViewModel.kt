@@ -4,12 +4,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.funnyexpensetracking.data.local.dao.AccountDao
 import com.example.funnyexpensetracking.data.local.dao.TransactionDao
+import com.example.funnyexpensetracking.data.local.entity.SyncStatus
 import com.example.funnyexpensetracking.data.local.entity.TransactionEntity
+import com.example.funnyexpensetracking.domain.model.Account
 import com.example.funnyexpensetracking.domain.model.Transaction
 import com.example.funnyexpensetracking.domain.model.TransactionType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -28,6 +33,33 @@ class DayDetailViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(DayDetailUiState())
     val uiState: StateFlow<DayDetailUiState> = _uiState.asStateFlow()
+
+    private val _accounts = MutableStateFlow<List<Account>>(emptyList())
+    val accounts: StateFlow<List<Account>> = _accounts.asStateFlow()
+
+    private val _uiEvent = MutableSharedFlow<DayDetailUiEvent>()
+    val uiEvent: SharedFlow<DayDetailUiEvent> = _uiEvent.asSharedFlow()
+
+    init {
+        loadAccounts()
+    }
+
+    private fun loadAccounts() {
+        viewModelScope.launch {
+            accountDao.getAllAccounts().collect { accountEntities ->
+                _accounts.value = accountEntities.map { entity ->
+                    Account(
+                        id = entity.id,
+                        name = entity.name,
+                        icon = entity.icon,
+                        balance = entity.balance,
+                        isDefault = entity.isDefault,
+                        sortOrder = entity.sortOrder
+                    )
+                }
+            }
+        }
+    }
 
     /**
      * 加载指定日期的数据
@@ -103,12 +135,86 @@ class DayDetailViewModel @Inject constructor(
     fun deleteTransaction(transactionId: Long) {
         viewModelScope.launch {
             try {
+                // 获取要删除的交易记录
+                val transaction = transactionDao.getById(transactionId)
+                if (transaction != null) {
+                    // 回滚账户余额
+                    val balanceChange = if (transaction.type == com.example.funnyexpensetracking.data.local.entity.TransactionType.INCOME) {
+                        -transaction.amount
+                    } else {
+                        transaction.amount
+                    }
+                    accountDao.updateBalance(transaction.accountId, balanceChange)
+                }
                 transactionDao.deleteById(transactionId)
+                _uiEvent.emit(DayDetailUiEvent.ShowMessage("删除成功"))
             } catch (e: Exception) {
-                // 忽略错误
+                _uiEvent.emit(DayDetailUiEvent.ShowMessage("删除失败: ${e.message}"))
             }
         }
     }
+
+    /**
+     * 更新交易记录
+     */
+    fun updateTransaction(
+        id: Long,
+        amount: Double,
+        type: TransactionType,
+        category: String,
+        accountId: Long,
+        note: String,
+        date: Long
+    ) {
+        viewModelScope.launch {
+            try {
+                val existingEntity = transactionDao.getById(id) ?: return@launch
+
+                // 回滚旧账户余额
+                val oldBalanceChange = if (existingEntity.type == com.example.funnyexpensetracking.data.local.entity.TransactionType.INCOME) {
+                    -existingEntity.amount
+                } else {
+                    existingEntity.amount
+                }
+                accountDao.updateBalance(existingEntity.accountId, oldBalanceChange)
+
+                // 更新交易记录
+                val entityType = when (type) {
+                    TransactionType.INCOME -> com.example.funnyexpensetracking.data.local.entity.TransactionType.INCOME
+                    TransactionType.EXPENSE -> com.example.funnyexpensetracking.data.local.entity.TransactionType.EXPENSE
+                }
+                val entity = TransactionEntity(
+                    id = id,
+                    serverId = existingEntity.serverId,
+                    amount = amount,
+                    type = entityType,
+                    category = category,
+                    accountId = accountId,
+                    note = note,
+                    date = date,
+                    createdAt = existingEntity.createdAt,
+                    updatedAt = System.currentTimeMillis(),
+                    syncStatus = SyncStatus.PENDING_UPLOAD
+                )
+                transactionDao.update(entity)
+
+                // 更新新账户余额
+                val newBalanceChange = if (type == TransactionType.INCOME) amount else -amount
+                accountDao.updateBalance(accountId, newBalanceChange)
+
+                _uiEvent.emit(DayDetailUiEvent.ShowMessage("更新成功"))
+            } catch (e: Exception) {
+                _uiEvent.emit(DayDetailUiEvent.ShowMessage("更新失败: ${e.message}"))
+            }
+        }
+    }
+}
+
+/**
+ * 日期明细UI事件
+ */
+sealed class DayDetailUiEvent {
+    data class ShowMessage(val message: String) : DayDetailUiEvent()
 }
 
 /**
