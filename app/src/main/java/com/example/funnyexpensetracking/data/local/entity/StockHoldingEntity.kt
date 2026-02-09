@@ -13,7 +13,8 @@ data class StockHoldingEntity(
     val symbol: String,                    // 股票代码
     val name: String,                      // 股票名称
     val shares: Double,                    // 持有股数
-    val purchasePrice: Double,             // 购入价格
+    val purchasePrice: Double,             // 购入单价（仅用于展示）
+    val totalCost: Double,                 // 购入总价（用于计算）
     val purchaseDate: Long,                // 购入日期
     val currentPrice: Double = purchasePrice,  // 当前价格（缓存）
     val lastUpdated: Long = System.currentTimeMillis(), // 最后更新时间

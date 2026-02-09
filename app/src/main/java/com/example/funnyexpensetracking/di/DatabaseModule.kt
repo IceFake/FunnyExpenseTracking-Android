@@ -54,6 +54,23 @@ object DatabaseModule {
         }
     }
 
+    /**
+     * 数据库版本5到6的迁移：为stock_holdings表添加totalCost字段
+     * totalCost用于存储购入总价，避免使用单价计算时的误差
+     */
+    private val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            // 添加totalCost列，默认值为 shares * purchasePrice
+            database.execSQL(
+                "ALTER TABLE stock_holdings ADD COLUMN totalCost REAL NOT NULL DEFAULT 0.0"
+            )
+            // 更新现有数据，计算totalCost = shares * purchasePrice
+            database.execSQL(
+                "UPDATE stock_holdings SET totalCost = shares * purchasePrice"
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -62,7 +79,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "funny_expense_db"
         )
-            .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .fallbackToDestructiveMigration()
             .build()
     }

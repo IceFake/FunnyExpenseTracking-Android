@@ -111,9 +111,11 @@ class InvestmentFragment : Fragment() {
                         binding.emptyView.visibility = View.GONE
                     }
 
-                    // 显示添加弹窗
-                    if (state.showAddDialog) {
+                    // 显示添加弹窗（只在状态变为true时显示一次）
+                    if (state.showAddDialog && !isDialogShowing) {
                         showAddInvestmentDialog(state.editingInvestment)
+                        // 立即重置状态，防止重复显示
+                        viewModel.hideAddDialog()
                     }
                 }
             }
@@ -182,7 +184,7 @@ class InvestmentFragment : Fragment() {
                 }
             },
             onDismiss = {
-                viewModel.hideAddDialog()
+                // 状态已在显示弹窗时重置，这里只需清理引用
                 addInvestmentDialog = null
                 isDialogShowing = false
             }

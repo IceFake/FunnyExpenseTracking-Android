@@ -150,11 +150,11 @@ class StockRepositoryImpl @Inject constructor(
     }
 
     private fun StockHoldingEntity.toDomainModel(): StockHolding {
-        return StockHolding(id = id, symbol = symbol, name = name, shares = shares, purchasePrice = purchasePrice, purchaseDate = purchaseDate, currentPrice = currentPrice, lastUpdated = lastUpdated)
+        return StockHolding(id = id, symbol = symbol, name = name, shares = shares, purchasePrice = purchasePrice, totalCost = totalCost, purchaseDate = purchaseDate, currentPrice = currentPrice, lastUpdated = lastUpdated)
     }
 
     private fun StockHolding.toEntity(): StockHoldingEntity {
-        return StockHoldingEntity(id = id, symbol = symbol, name = name, shares = shares, purchasePrice = purchasePrice, purchaseDate = purchaseDate, currentPrice = currentPrice, lastUpdated = lastUpdated, createdAt = System.currentTimeMillis())
+        return StockHoldingEntity(id = id, symbol = symbol, name = name, shares = shares, purchasePrice = purchasePrice, totalCost = totalCost, purchaseDate = purchaseDate, currentPrice = currentPrice, lastUpdated = lastUpdated, createdAt = System.currentTimeMillis())
     }
 
     private fun com.example.funnyexpensetracking.data.remote.dto.StockQuoteDto.toDomainModel(): StockQuote {

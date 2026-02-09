@@ -34,7 +34,7 @@ interface StockHoldingDao {
     @Query("SELECT SUM(shares * currentPrice) FROM stock_holdings")
     suspend fun getTotalStockValue(): Double?
 
-    @Query("SELECT SUM(shares * purchasePrice) FROM stock_holdings")
+    @Query("SELECT SUM(totalCost) FROM stock_holdings")
     suspend fun getTotalStockCost(): Double?
 
     @Query("DELETE FROM stock_holdings")

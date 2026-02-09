@@ -50,5 +50,11 @@ abstract class RepositoryModule {
     abstract fun bindAccountRepository(
         impl: AccountRepositoryImpl
     ): AccountRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDataManagementRepository(
+        impl: DataManagementRepositoryImpl
+    ): DataManagementRepository
 }
 

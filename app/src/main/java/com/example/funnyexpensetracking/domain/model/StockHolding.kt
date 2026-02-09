@@ -8,7 +8,8 @@ data class StockHolding(
     val symbol: String,
     val name: String,
     val shares: Double,
-    val purchasePrice: Double,
+    val purchasePrice: Double,          // 购入单价（仅用于展示）
+    val totalCost: Double,              // 购入总价（用于计算）
     val purchaseDate: Long,
     val currentPrice: Double = purchasePrice,
     val lastUpdated: Long = System.currentTimeMillis()
@@ -20,10 +21,10 @@ data class StockHolding(
         get() = shares * currentPrice
 
     /**
-     * 计算成本
+     * 计算成本（使用totalCost，避免单价计算误差）
      */
     val cost: Double
-        get() = shares * purchasePrice
+        get() = totalCost
 
     /**
      * 计算盈亏金额

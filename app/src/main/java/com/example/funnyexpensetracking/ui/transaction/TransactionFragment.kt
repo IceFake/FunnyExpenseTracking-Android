@@ -123,9 +123,11 @@ class TransactionFragment : Fragment() {
                         binding.emptyView.visibility = View.GONE
                     }
 
-                    // 显示添加对话框
-                    if (state.showAddDialog) {
+                    // 显示添加对话框（只在状态变为true时显示一次）
+                    if (state.showAddDialog && addTransactionDialog?.isShowing != true) {
                         showAddTransactionDialog(state.editingTransaction)
+                        // 立即重置状态，防止重复显示
+                        viewModel.hideAddDialog()
                     }
 
                     // 显示添加账户对话框
@@ -243,7 +245,7 @@ class TransactionFragment : Fragment() {
                 }
             },
             onDismiss = {
-                viewModel.hideAddDialog()
+                // 状态已在显示弹窗时重置，这里只需清理引用
                 addTransactionDialog = null
             },
             onAddAccount = {
