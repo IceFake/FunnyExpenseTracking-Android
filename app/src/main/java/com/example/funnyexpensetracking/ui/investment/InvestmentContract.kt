@@ -35,7 +35,9 @@ data class InvestmentUiState(
     // 是否显示添加弹窗
     val showAddDialog: Boolean = false,
     // 当前编辑的投资条目
-    val editingInvestment: Investment? = null
+    val editingInvestment: Investment? = null,
+    // 是否正在刷新股票价格
+    val isRefreshing: Boolean = false
 ) : UiState
 
 /**

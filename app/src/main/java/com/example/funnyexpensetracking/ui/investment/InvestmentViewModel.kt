@@ -6,11 +6,16 @@ import com.example.funnyexpensetracking.data.local.entity.InvestmentEntity
 import com.example.funnyexpensetracking.data.local.entity.InvestmentCategory as EntityCategory
 import com.example.funnyexpensetracking.domain.model.Investment
 import com.example.funnyexpensetracking.domain.model.InvestmentCategory
+import com.example.funnyexpensetracking.domain.repository.InvestmentRepository
 import com.example.funnyexpensetracking.ui.common.BaseViewModel
 import com.example.funnyexpensetracking.ui.common.LoadingState
+import com.example.funnyexpensetracking.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,13 +24,17 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class InvestmentViewModel @Inject constructor(
-    private val investmentDao: InvestmentDao
+    private val investmentDao: InvestmentDao,
+    private val investmentRepository: InvestmentRepository
 ) : BaseViewModel<InvestmentUiState, InvestmentUiEvent>() {
+
+    private var stockPriceRefreshJob: Job? = null
 
     override fun initialState() = InvestmentUiState()
 
     init {
         loadInvestments()
+        startStockPriceRefresh()
     }
 
     /**
@@ -261,6 +270,62 @@ class InvestmentViewModel @Inject constructor(
             createdAt = createdAt,
             updatedAt = updatedAt
         )
+    }
+
+    /**
+     * 每分钟自动刷新股票价格
+     */
+    private fun startStockPriceRefresh() {
+        stockPriceRefreshJob?.cancel()
+        stockPriceRefreshJob = viewModelScope.launch {
+            // 初始刷新一次
+            refreshStockPricesInternal()
+
+            // 每分钟刷新
+            while (isActive) {
+                delay(60_000) // 60秒
+                refreshStockPricesInternal()
+            }
+        }
+    }
+
+    /**
+     * 内部刷新股票价格
+     */
+    private suspend fun refreshStockPricesInternal() {
+        when (val result = investmentRepository.refreshAllStockPrices()) {
+            is Resource.Success -> {
+                // 刷新成功，UI会通过Flow自动更新
+            }
+            is Resource.Error -> {
+                // 静默失败，不显示错误消息
+            }
+            is Resource.Loading -> {}
+        }
+    }
+
+    /**
+     * 手动刷新股票价格
+     */
+    fun refreshStockPrices() {
+        viewModelScope.launch {
+            updateState { copy(isRefreshing = true) }
+            when (val result = investmentRepository.refreshAllStockPrices()) {
+                is Resource.Success -> {
+                    sendEvent(InvestmentUiEvent.ShowMessage("刷新成功"))
+                }
+                is Resource.Error -> {
+                    sendEvent(InvestmentUiEvent.ShowMessage("刷新失败: ${result.message}"))
+                }
+                is Resource.Loading -> {}
+            }
+            updateState { copy(isRefreshing = false) }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stockPriceRefreshJob?.cancel()
     }
 }
 

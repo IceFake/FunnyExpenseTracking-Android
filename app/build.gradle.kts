@@ -84,9 +84,13 @@ dependencies {
     // WorkManager
     implementation(libs.androidx.workmanager)
 
+    // SwipeRefreshLayout
+    implementation(libs.androidx.swiperefreshlayout)
+
     // Network
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
+    implementation("com.squareup.retrofit2:converter-scalars:2.11.0")
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.gson)

@@ -90,12 +90,20 @@ class InvestmentFragment : Fragment() {
         binding.fabAdd.setOnClickListener {
             viewModel.showAddDialog()
         }
+
+        // 下拉刷新股票价格
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            viewModel.refreshStockPrices()
+        }
     }
 
     private fun observeState() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collectLatest { state ->
+                    // 更新刷新状态
+                    binding.swipeRefreshLayout.isRefreshing = state.isRefreshing
+
                     // 更新统计卡片
                     updateSummaryCard(state)
 
