@@ -47,6 +47,44 @@ interface InvestmentDao {
     @Query("SELECT DISTINCT description FROM investments WHERE category = 'STOCK'")
     suspend fun getAllStockCodes(): List<String>
 
+    /**
+     * 获取投资总当前价值
+     * 股票：当前价格 * 数量
+     * 其他：使用 currentValue
+     */
+    @Query("""
+        SELECT COALESCE(SUM(
+            CASE 
+                WHEN category = 'STOCK' THEN 
+                    CASE WHEN currentPrice > 0 THEN currentPrice * quantity ELSE investment END
+                ELSE 
+                    CASE WHEN currentValue > 0 THEN currentValue ELSE investment END
+            END
+        ), 0.0) FROM investments
+    """)
+    suspend fun getTotalCurrentValue(): Double
+
+    /**
+     * 获取投资总投入
+     */
+    @Query("SELECT COALESCE(SUM(investment), 0.0) FROM investments")
+    suspend fun getTotalInvestment(): Double
+
+    /**
+     * 获取投资总当前价值（Flow）
+     */
+    @Query("""
+        SELECT COALESCE(SUM(
+            CASE 
+                WHEN category = 'STOCK' THEN 
+                    CASE WHEN currentPrice > 0 THEN currentPrice * quantity ELSE investment END
+                ELSE 
+                    CASE WHEN currentValue > 0 THEN currentValue ELSE investment END
+            END
+        ), 0.0) FROM investments
+    """)
+    fun getTotalCurrentValueFlow(): Flow<Double>
+
     @Query("DELETE FROM investments")
     suspend fun deleteAll()
 

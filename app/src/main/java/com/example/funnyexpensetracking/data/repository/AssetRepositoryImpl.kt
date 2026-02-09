@@ -20,7 +20,8 @@ class AssetRepositoryImpl @Inject constructor(
     private val fixedIncomeDao: FixedIncomeDao,
     private val assetSnapshotDao: AssetSnapshotDao,
     private val transactionDao: TransactionDao,
-    private val stockHoldingDao: StockHoldingDao
+    private val stockHoldingDao: StockHoldingDao,
+    private val investmentDao: InvestmentDao
 ) : AssetRepository {
 
     override fun getAllActiveFixedIncomes(): Flow<List<FixedIncome>> {
@@ -104,15 +105,25 @@ class AssetRepositoryImpl @Inject constructor(
             }
         }
 
+        // 股票持仓（资产管理模块）
         val stockValue = stockHoldingDao.getTotalStockValue() ?: 0.0
         val stockCost = stockHoldingDao.getTotalStockCost() ?: 0.0
-        val stockProfitLoss = stockValue - stockCost
+
+        // 投资/理财模块的价值
+        val investmentCurrentValue = investmentDao.getTotalCurrentValue()
+        val investmentCost = investmentDao.getTotalInvestment()
+
+        // 合并股票和投资的价值
+        val totalStockAsset = stockValue + investmentCurrentValue
+        val totalStockCost = stockCost + investmentCost
+        val stockProfitLoss = totalStockAsset - totalStockCost
+
         val cashAsset = totalIncome - totalExpense
 
         return AssetSummary(
-            totalAsset = cashAsset + stockValue,
+            totalAsset = cashAsset + totalStockAsset,
             cashAsset = cashAsset,
-            stockAsset = stockValue,
+            stockAsset = totalStockAsset,
             totalIncome = totalIncome,
             totalExpense = totalExpense,
             fixedIncomePerMinute = fixedIncomePerMinute,

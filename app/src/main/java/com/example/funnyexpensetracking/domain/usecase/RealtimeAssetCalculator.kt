@@ -3,6 +3,7 @@ package com.example.funnyexpensetracking.domain.usecase
 import com.example.funnyexpensetracking.data.local.dao.AccountDao
 import com.example.funnyexpensetracking.data.local.dao.AssetBaselineDao
 import com.example.funnyexpensetracking.data.local.dao.FixedIncomeDao
+import com.example.funnyexpensetracking.data.local.dao.InvestmentDao
 import com.example.funnyexpensetracking.data.local.dao.TransactionDao
 import com.example.funnyexpensetracking.data.local.entity.AssetBaselineEntity
 import com.example.funnyexpensetracking.data.local.entity.FixedIncomeType
@@ -28,21 +29,23 @@ data class RealtimeAssetData(
     val baselineAmount: Double,         // 基准金额
     val totalAccountBalance: Double = 0.0,       // 各账户余额总和
     val totalFixedIncome: Double = 0.0,          // 固定收入累计总额
-    val totalFixedExpense: Double = 0.0          // 固定支出累计总额
+    val totalFixedExpense: Double = 0.0,         // 固定支出累计总额
+    val totalInvestmentValue: Double = 0.0       // 投资/理财当前价值
 )
 
 /**
  * 实时资产计算器
  * 负责根据账户余额和固定收支的累计值计算实时资产
  *
- * 总资产 = 各账户余额之和 + 固定收入累计总额 - 固定支出累计总额
+ * 总资产 = 各账户余额之和 + 固定收入累计总额 - 固定支出累计总额 + 投资当前价值
  */
 @Singleton
 class RealtimeAssetCalculator @Inject constructor(
     private val fixedIncomeDao: FixedIncomeDao,
     private val transactionDao: TransactionDao,
     private val accountDao: AccountDao,
-    private val assetBaselineDao: AssetBaselineDao
+    private val assetBaselineDao: AssetBaselineDao,
+    private val investmentDao: InvestmentDao
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + Job())
 
@@ -61,6 +64,21 @@ class RealtimeAssetCalculator @Inject constructor(
 
     init {
         startRealtimeUpdate()
+        observeInvestmentChanges()
+    }
+
+    /**
+     * 监听投资价值变化
+     */
+    private fun observeInvestmentChanges() {
+        scope.launch {
+            investmentDao.getTotalCurrentValueFlow()
+                .distinctUntilChanged()
+                .collect {
+                    // 投资价值变化时重新计算资产
+                    recalculateAsset()
+                }
+        }
     }
 
     /**
@@ -112,8 +130,11 @@ class RealtimeAssetCalculator @Inject constructor(
         val totalFixedIncome = fixedIncomeDao.getTotalAccumulatedIncome()
         val totalFixedExpense = fixedIncomeDao.getTotalAccumulatedExpense()
 
-        // 计算当前资产 = 账户余额总和 + 固定收入累计 - 固定支出累计
-        val currentAsset = totalAccountBalance + totalFixedIncome - totalFixedExpense
+        // 获取投资/理财当前价值
+        val totalInvestmentValue = investmentDao.getTotalCurrentValue()
+
+        // 计算当前资产 = 账户余额总和 + 固定收入累计 - 固定支出累计 + 投资当前价值
+        val currentAsset = totalAccountBalance + totalFixedIncome - totalFixedExpense + totalInvestmentValue
 
         val currentMinuteTimestamp = getCurrentMinuteTimestamp()
 
@@ -126,7 +147,8 @@ class RealtimeAssetCalculator @Inject constructor(
             baselineAmount = currentAsset,
             totalAccountBalance = totalAccountBalance,
             totalFixedIncome = totalFixedIncome,
-            totalFixedExpense = totalFixedExpense
+            totalFixedExpense = totalFixedExpense,
+            totalInvestmentValue = totalInvestmentValue
         )
 
         // 更新基准值
@@ -140,7 +162,7 @@ class RealtimeAssetCalculator @Inject constructor(
 
     /**
      * 重新计算资产（当收支变化时调用）
-     * 总资产 = 各账户余额之和 + 固定收入累计总额 - 固定支出累计总额
+     * 总资产 = 各账户余额之和 + 固定收入累计总额 - 固定支出累计总额 + 投资当前价值
      */
     suspend fun recalculateAsset() {
         val fixedIncomes = fixedIncomeDao.getAllActiveFixedIncomes().first()
@@ -167,8 +189,11 @@ class RealtimeAssetCalculator @Inject constructor(
         val totalFixedIncome = fixedIncomeDao.getTotalAccumulatedIncome()
         val totalFixedExpense = fixedIncomeDao.getTotalAccumulatedExpense()
 
-        // 计算当前资产 = 账户余额总和 + 固定收入累计 - 固定支出累计
-        val currentAsset = totalAccountBalance + totalFixedIncome - totalFixedExpense
+        // 获取投资/理财当前价值
+        val totalInvestmentValue = investmentDao.getTotalCurrentValue()
+
+        // 计算当前资产 = 账户余额总和 + 固定收入累计 - 固定支出累计 + 投资当前价值
+        val currentAsset = totalAccountBalance + totalFixedIncome - totalFixedExpense + totalInvestmentValue
 
         val currentMinuteTimestamp = getCurrentMinuteTimestamp()
 
@@ -190,7 +215,8 @@ class RealtimeAssetCalculator @Inject constructor(
             baselineAmount = currentAsset,
             totalAccountBalance = totalAccountBalance,
             totalFixedIncome = totalFixedIncome,
-            totalFixedExpense = totalFixedExpense
+            totalFixedExpense = totalFixedExpense,
+            totalInvestmentValue = totalInvestmentValue
         )
     }
 

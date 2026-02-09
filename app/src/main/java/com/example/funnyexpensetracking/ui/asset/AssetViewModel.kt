@@ -1,6 +1,7 @@
 package com.example.funnyexpensetracking.ui.asset
 
 import androidx.lifecycle.viewModelScope
+import com.example.funnyexpensetracking.data.local.dao.InvestmentDao
 import com.example.funnyexpensetracking.domain.model.FixedIncome
 import com.example.funnyexpensetracking.domain.model.StockHolding
 import com.example.funnyexpensetracking.domain.repository.AssetRepository
@@ -23,7 +24,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AssetViewModel @Inject constructor(
     private val assetRepository: AssetRepository,
-    private val stockRepository: StockRepository
+    private val stockRepository: StockRepository,
+    private val investmentDao: InvestmentDao
 ) : BaseViewModel<AssetUiState, AssetUiEvent>() {
 
     private var realtimeUpdateJob: Job? = null
@@ -33,6 +35,7 @@ class AssetViewModel @Inject constructor(
     init {
         loadAssetData()
         startRealtimeAssetUpdate()
+        observeInvestmentChanges()
     }
 
     /**
@@ -64,6 +67,30 @@ class AssetViewModel @Inject constructor(
                     loadingState = LoadingState.SUCCESS
                 )
             }
+        }
+    }
+
+    /**
+     * 监听投资数据变化，自动刷新总资产
+     */
+    private fun observeInvestmentChanges() {
+        // 监听投资当前价值变化
+        investmentDao.getTotalCurrentValueFlow()
+            .onEach {
+                // 投资价值变化时重新计算总资产
+                val summary = assetRepository.calculateCurrentAssetSummary()
+                updateState { copy(assetSummary = summary) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    /**
+     * 手动刷新资产数据
+     */
+    fun refreshAssetSummary() {
+        viewModelScope.launch {
+            val summary = assetRepository.calculateCurrentAssetSummary()
+            updateState { copy(assetSummary = summary) }
         }
     }
 
