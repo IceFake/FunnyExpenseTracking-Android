@@ -25,11 +25,13 @@ class AddTransactionBottomSheet(
     context: Context,
     private val accounts: List<Account>,
     private val editingTransaction: Transaction?,
+    private val lastSelectedAccountId: Long = 0L,
     private val onSave: (amount: Double, type: TransactionType, category: String, accountId: Long, note: String, date: Long) -> Unit,
     private val onDismiss: () -> Unit,
     private val onAddAccount: () -> Unit,
     private val onEditAccount: (Account) -> Unit = {},
-    private val onAddFixedIncome: () -> Unit = {}
+    private val onAddFixedIncome: () -> Unit = {},
+    private val onAccountSelected: (accountId: Long) -> Unit = {}
 ) : BottomSheetDialog(context) {
 
     private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
@@ -161,6 +163,15 @@ class AddTransactionBottomSheet(
             return
         }
 
+        // 确定应该选中的账户ID
+        // 优先级：编辑模式的账户 > 上次选择的账户 > 默认账户 > 第一个账户
+        val targetAccountId = when {
+            editingTransaction != null -> editingTransaction.accountId
+            lastSelectedAccountId != 0L && accounts.any { it.id == lastSelectedAccountId } -> lastSelectedAccountId
+            accounts.any { it.isDefault } -> accounts.first { it.isDefault }.id
+            else -> accounts.first().id
+        }
+
         accounts.forEach { account ->
             val chip = Chip(context).apply {
                 text = "${account.name}"
@@ -169,6 +180,8 @@ class AddTransactionBottomSheet(
                 setOnCheckedChangeListener { _, isChecked ->
                     if (isChecked) {
                         selectedAccountId = account.id
+                        // 保存用户选择的账户
+                        onAccountSelected(account.id)
                     }
                 }
                 // 长按编辑账户
@@ -179,15 +192,10 @@ class AddTransactionBottomSheet(
             }
             chipGroup.addView(chip)
 
-            // 默认选中第一个或默认账户
-            if (account.isDefault || (selectedAccountId == 0L && accounts.indexOf(account) == 0)) {
+            // 选中目标账户
+            if (account.id == targetAccountId) {
                 chip.isChecked = true
                 selectedAccountId = account.id
-            }
-
-            // 如果是编辑模式且账户匹配，选中
-            if (account.id == selectedAccountId) {
-                chip.isChecked = true
             }
         }
     }

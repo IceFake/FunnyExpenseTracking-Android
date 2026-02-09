@@ -222,6 +222,7 @@ class TransactionFragment : Fragment() {
             context = requireContext(),
             accounts = viewModel.uiState.value.accounts,
             editingTransaction = editingTransaction,
+            lastSelectedAccountId = viewModel.getLastSelectedAccountId(),
             onSave = { amount, type, category, accountId, note, date ->
                 if (editingTransaction != null) {
                     viewModel.updateTransaction(
@@ -256,6 +257,9 @@ class TransactionFragment : Fragment() {
             },
             onAddFixedIncome = {
                 viewModel.showAddFixedIncomeDialog()
+            },
+            onAccountSelected = { accountId ->
+                viewModel.saveLastSelectedAccountId(accountId)
             }
         )
 

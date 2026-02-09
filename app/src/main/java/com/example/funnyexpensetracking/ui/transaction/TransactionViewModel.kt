@@ -1,6 +1,7 @@
 package com.example.funnyexpensetracking.ui.transaction
 
 import androidx.lifecycle.viewModelScope
+import com.example.funnyexpensetracking.data.local.UserPreferencesManager
 import com.example.funnyexpensetracking.data.local.dao.AccountDao
 import com.example.funnyexpensetracking.data.local.dao.FixedIncomeDao
 import com.example.funnyexpensetracking.data.local.dao.TransactionDao
@@ -43,7 +44,8 @@ class TransactionViewModel @Inject constructor(
     private val fixedIncomeDao: FixedIncomeDao,
     private val syncManager: SyncManager,
     private val networkMonitor: NetworkMonitor,
-    private val realtimeAssetCalculator: RealtimeAssetCalculator
+    private val realtimeAssetCalculator: RealtimeAssetCalculator,
+    private val userPreferencesManager: UserPreferencesManager
 ) : BaseViewModel<TransactionUiState, TransactionUiEvent>() {
 
     private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
@@ -115,6 +117,20 @@ class TransactionViewModel @Inject constructor(
             }
             syncManager.syncAll()
         }
+    }
+
+    /**
+     * 获取用户上次选择的账户ID
+     */
+    fun getLastSelectedAccountId(): Long {
+        return userPreferencesManager.getLastSelectedAccountId()
+    }
+
+    /**
+     * 保存用户选择的账户ID
+     */
+    fun saveLastSelectedAccountId(accountId: Long) {
+        userPreferencesManager.saveLastSelectedAccountId(accountId)
     }
 
     /**
