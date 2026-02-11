@@ -33,9 +33,7 @@ data class FixedIncomeUiState(
     // 加载状态
     val loadingState: LoadingState = LoadingState.IDLE,
     // 是否显示添加弹窗
-    val showAddDialog: Boolean = false,
-    // 当前编辑的固定收支
-    val editingFixedIncome: FixedIncome? = null
+    val showAddDialog: Boolean = false
 ) : UiState
 
 /**
@@ -44,7 +42,6 @@ data class FixedIncomeUiState(
 sealed class FixedIncomeUiEvent : UiEvent {
     data class ShowMessage(val message: String) : FixedIncomeUiEvent()
     object FixedIncomeAdded : FixedIncomeUiEvent()
-    object FixedIncomeUpdated : FixedIncomeUiEvent()
     object FixedIncomeDeleted : FixedIncomeUiEvent()
     object DismissDialog : FixedIncomeUiEvent()
 }

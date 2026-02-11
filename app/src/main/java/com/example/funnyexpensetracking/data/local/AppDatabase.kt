@@ -20,7 +20,7 @@ import com.example.funnyexpensetracking.data.local.entity.*
         AssetBaselineEntity::class,
         InvestmentEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

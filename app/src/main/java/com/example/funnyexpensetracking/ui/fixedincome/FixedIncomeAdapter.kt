@@ -72,22 +72,42 @@ class FixedIncomeAdapter(
                 tvAmount.setTextColor(itemView.context.getColor(android.R.color.holo_red_dark))
             }
 
-            // 设置累计金额
-            if (item.accumulatedAmount > 0) {
+            // 设置累计信息（时间 + 金额）
+            if (item.accumulatedMinutes > 0 || item.accumulatedAmount > 0) {
                 tvAccumulatedAmount.visibility = View.VISIBLE
                 val formattedAccumulated = currencyFormat.format(item.accumulatedAmount)
-                tvAccumulatedAmount.text = "累计: ¥$formattedAccumulated"
+                val timeText = item.getFormattedAccumulatedTime()
+                tvAccumulatedAmount.text = "累计: ¥$formattedAccumulated ($timeText)"
             } else {
                 tvAccumulatedAmount.visibility = View.GONE
             }
 
-            // 设置状态
-            if (item.isActive) {
-                tvStatus.text = "生效中"
-                tvStatus.setTextColor(itemView.context.getColor(android.R.color.holo_green_dark))
-            } else {
-                tvStatus.text = "已停用"
-                tvStatus.setTextColor(itemView.context.getColor(android.R.color.darker_gray))
+            // 设置状态（根据当前时间判断是否处于生效期）
+            val currentTime = System.currentTimeMillis()
+            val isCurrentlyEffective = item.isEffectiveAt(currentTime)
+
+            when {
+                !item.isActive -> {
+                    tvStatus.text = "已停用"
+                    tvStatus.setTextColor(itemView.context.getColor(android.R.color.darker_gray))
+                    // 设置整体半透明效果
+                    itemView.alpha = 0.6f
+                }
+                currentTime < item.startDate -> {
+                    tvStatus.text = "未开始"
+                    tvStatus.setTextColor(itemView.context.getColor(android.R.color.holo_orange_dark))
+                    itemView.alpha = 1.0f
+                }
+                item.endDate != null && currentTime > item.endDate -> {
+                    tvStatus.text = "已结束"
+                    tvStatus.setTextColor(itemView.context.getColor(android.R.color.darker_gray))
+                    itemView.alpha = 0.6f
+                }
+                else -> {
+                    tvStatus.text = "生效中"
+                    tvStatus.setTextColor(itemView.context.getColor(android.R.color.holo_green_dark))
+                    itemView.alpha = 1.0f
+                }
             }
 
             // 点击事件

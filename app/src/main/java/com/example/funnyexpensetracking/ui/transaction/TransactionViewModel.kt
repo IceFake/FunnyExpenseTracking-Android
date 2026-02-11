@@ -543,18 +543,22 @@ class TransactionViewModel @Inject constructor(
         type: FixedIncomeType,
         frequency: FixedIncomeFrequency,
         startDate: Long,
-        accumulatedAmount: Double = 0.0
+        endDate: Long? = null
     ) {
         viewModelScope.launch {
             try {
+                val currentTime = System.currentTimeMillis()
                 val entity = FixedIncomeEntity(
                     name = name,
                     amount = amount,
                     type = type.toEntityType(),
                     frequency = frequency.toEntityFrequency(),
                     startDate = startDate,
+                    endDate = endDate,
                     isActive = true,
-                    accumulatedAmount = accumulatedAmount
+                    accumulatedMinutes = 0,
+                    accumulatedAmount = 0.0,
+                    lastRecordTime = currentTime
                 )
                 fixedIncomeDao.insert(entity)
 

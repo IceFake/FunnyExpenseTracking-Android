@@ -73,6 +73,12 @@ interface AccountDao {
     @Query("SELECT SUM(balance) FROM accounts WHERE syncStatus != :excludeStatus")
     suspend fun getTotalBalance(excludeStatus: SyncStatus = SyncStatus.PENDING_DELETE): Double?
 
+    /**
+     * 获取所有账户余额总和的Flow（用于监听变化）
+     */
+    @Query("SELECT SUM(balance) FROM accounts WHERE syncStatus != 'PENDING_DELETE'")
+    fun getTotalBalanceFlow(): Flow<Double?>
+
     @Query("DELETE FROM accounts")
     suspend fun deleteAll()
 

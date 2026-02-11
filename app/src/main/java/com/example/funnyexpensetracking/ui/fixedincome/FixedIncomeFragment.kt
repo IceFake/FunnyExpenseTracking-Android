@@ -24,6 +24,11 @@ import java.text.DecimalFormat
 
 /**
  * 固定收支管理Fragment
+ *
+ * 功能说明：
+ * - 条目新增后不可编辑
+ * - 点击条目显示详情
+ * - 长按条目显示操作菜单（停用/删除）
  */
 @AndroidEntryPoint
 class FixedIncomeFragment : Fragment() {
@@ -57,10 +62,12 @@ class FixedIncomeFragment : Fragment() {
     private fun setupRecyclerView() {
         adapter = FixedIncomeAdapter(
             onItemClick = { fixedIncome ->
-                showOptionsDialog(fixedIncome)
+                // 点击显示详情
+                showDetailDialog(fixedIncome)
             },
             onItemLongClick = { fixedIncome ->
-                showDeleteConfirmDialog(fixedIncome)
+                // 长按显示操作菜单
+                showOptionsDialog(fixedIncome)
             }
         )
 
@@ -112,10 +119,9 @@ class FixedIncomeFragment : Fragment() {
                         binding.emptyView.visibility = View.GONE
                     }
 
-                    // 显示添加弹窗（只在状态变为true时显示一次）
+                    // 显示添加弹窗
                     if (state.showAddDialog && addFixedIncomeDialog?.isShowing != true) {
-                        showAddFixedIncomeDialog(state.editingFixedIncome)
-                        // 立即重置状态，防止重复显示
+                        showAddFixedIncomeDialog()
                         viewModel.hideAddDialog()
                     }
                 }
@@ -162,29 +168,15 @@ class FixedIncomeFragment : Fragment() {
 
     private var addFixedIncomeDialog: BottomSheetDialog? = null
 
-    private fun showAddFixedIncomeDialog(editingFixedIncome: FixedIncome?) {
+    private fun showAddFixedIncomeDialog() {
         if (addFixedIncomeDialog?.isShowing == true) return
 
         val dialog = AddFixedIncomeBottomSheet(
             context = requireContext(),
-            editingFixedIncome = editingFixedIncome,
-            onSave = { name, amount, type, frequency, startDate, accumulatedAmount ->
-                if (editingFixedIncome != null) {
-                    viewModel.updateFixedIncome(
-                        id = editingFixedIncome.id,
-                        name = name,
-                        amount = amount,
-                        type = type,
-                        frequency = frequency,
-                        startDate = startDate,
-                        accumulatedAmount = accumulatedAmount
-                    )
-                } else {
-                    viewModel.addFixedIncome(name, amount, type, frequency, startDate, accumulatedAmount)
-                }
+            onSave = { name, amount, type, frequency, startDate, endDate ->
+                viewModel.addFixedIncome(name, amount, type, frequency, startDate, endDate)
             },
             onDismiss = {
-                // 状态已在显示弹窗时重置，这里只需清理引用
                 addFixedIncomeDialog = null
             }
         )
@@ -193,29 +185,86 @@ class FixedIncomeFragment : Fragment() {
         dialog.show()
     }
 
+    /**
+     * 显示详情对话框
+     */
+    private fun showDetailDialog(fixedIncome: FixedIncome) {
+        val typeText = if (fixedIncome.type == com.example.funnyexpensetracking.domain.model.FixedIncomeType.INCOME) "固定收入" else "固定支出"
+        val frequencyText = when (fixedIncome.frequency) {
+            com.example.funnyexpensetracking.domain.model.FixedIncomeFrequency.DAILY -> "每日"
+            com.example.funnyexpensetracking.domain.model.FixedIncomeFrequency.WEEKLY -> "每周"
+            com.example.funnyexpensetracking.domain.model.FixedIncomeFrequency.MONTHLY -> "每月"
+            com.example.funnyexpensetracking.domain.model.FixedIncomeFrequency.YEARLY -> "每年"
+        }
+        val statusText = if (fixedIncome.isActive) "生效中" else "已停用"
+
+        val message = buildString {
+            appendLine("类型: $typeText")
+            appendLine("频率: $frequencyText")
+            appendLine("周期金额: ¥${String.format("%.2f", fixedIncome.amount)}")
+            appendLine("每分钟: ¥${perMinuteFormat.format(fixedIncome.getAmountPerMinute())}")
+            appendLine("累计时间: ${fixedIncome.getFormattedAccumulatedTime()}")
+            appendLine("累计金额: ¥${String.format("%.2f", fixedIncome.accumulatedAmount)}")
+            appendLine("状态: $statusText")
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(fixedIncome.name)
+            .setMessage(message)
+            .setPositiveButton("确定", null)
+            .setNegativeButton("操作") { _, _ ->
+                showOptionsDialog(fixedIncome)
+            }
+            .show()
+    }
+
+    /**
+     * 显示操作选项对话框（只有停用和删除）
+     */
     private fun showOptionsDialog(fixedIncome: FixedIncome) {
-        val options = arrayOf(
-            "编辑",
-            if (fixedIncome.isActive) "停用" else "启用",
-            "删除"
-        )
+        val options = if (fixedIncome.isActive) {
+            arrayOf("停用", "删除")
+        } else {
+            arrayOf("删除")  // 已停用的条目只能删除
+        }
 
         AlertDialog.Builder(requireContext())
             .setTitle(fixedIncome.name)
             .setItems(options) { _, which ->
-                when (which) {
-                    0 -> viewModel.editFixedIncome(fixedIncome)
-                    1 -> viewModel.toggleFixedIncomeStatus(fixedIncome)
-                    2 -> showDeleteConfirmDialog(fixedIncome)
+                if (fixedIncome.isActive) {
+                    when (which) {
+                        0 -> showDeactivateConfirmDialog(fixedIncome)
+                        1 -> showDeleteConfirmDialog(fixedIncome)
+                    }
+                } else {
+                    // 已停用，只有删除选项
+                    showDeleteConfirmDialog(fixedIncome)
                 }
             }
             .show()
     }
 
+    /**
+     * 显示停用确认对话框
+     */
+    private fun showDeactivateConfirmDialog(fixedIncome: FixedIncome) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("停用确认")
+            .setMessage("停用后将不再累计「${fixedIncome.name}」的金额，但历史累计数据会保留。\n\n确定要停用吗？")
+            .setPositiveButton("停用") { _, _ ->
+                viewModel.deactivateFixedIncome(fixedIncome)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /**
+     * 显示删除确认对话框
+     */
     private fun showDeleteConfirmDialog(fixedIncome: FixedIncome) {
         AlertDialog.Builder(requireContext())
             .setTitle("删除确认")
-            .setMessage("确定要删除「${fixedIncome.name}」吗？")
+            .setMessage("删除后所有数据将无法恢复。\n\n确定要删除「${fixedIncome.name}」吗？")
             .setPositiveButton("删除") { _, _ ->
                 viewModel.deleteFixedIncome(fixedIncome)
             }

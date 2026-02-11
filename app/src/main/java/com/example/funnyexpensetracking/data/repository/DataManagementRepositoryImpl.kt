@@ -163,7 +163,7 @@ class DataManagementRepositoryImpl @Inject constructor(
                 }
             }
 
-            // 3. 导入固定收支（按名称和类型匹配，相同则叠加累计金额）
+            // 3. 导入固定收支（按名称和类型匹配，相同则叠加累计时间和金额）
             val existingFixedIncomes = fixedIncomeDao.getAllFixedIncomes().first()
             for (fiBackup in backupData.fixedIncomes) {
                 val fiType = try {
@@ -181,8 +181,15 @@ class DataManagementRepositoryImpl @Inject constructor(
                     it.name == fiBackup.name && it.type.name == fiBackup.type
                 }
                 if (existing != null) {
-                    // 叠加累计金额
-                    fixedIncomeDao.addToAccumulatedAmount(existing.id, fiBackup.accumulatedAmount)
+                    // 叠加累计时间和重新计算累计金额
+                    val newAccumulatedMinutes = existing.accumulatedMinutes + fiBackup.accumulatedMinutes
+                    val newAccumulatedAmount = fiFrequency.calculateAccumulatedAmount(existing.amount, newAccumulatedMinutes)
+                    fixedIncomeDao.updateAccumulated(
+                        id = existing.id,
+                        accumulatedMinutes = newAccumulatedMinutes,
+                        accumulatedAmount = newAccumulatedAmount,
+                        lastRecordTime = System.currentTimeMillis()
+                    )
                     fixedIncomesMerged++
                 } else {
                     // 新增
@@ -195,7 +202,9 @@ class DataManagementRepositoryImpl @Inject constructor(
                             startDate = fiBackup.startDate,
                             endDate = fiBackup.endDate,
                             isActive = fiBackup.isActive,
+                            accumulatedMinutes = fiBackup.accumulatedMinutes,
                             accumulatedAmount = fiBackup.accumulatedAmount,
+                            lastRecordTime = fiBackup.lastRecordTime,
                             createdAt = fiBackup.createdAt
                         )
                     )

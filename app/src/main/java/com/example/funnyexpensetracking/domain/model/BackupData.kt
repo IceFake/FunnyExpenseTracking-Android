@@ -59,7 +59,9 @@ data class FixedIncomeBackup(
     val startDate: Long,
     val endDate: Long?,
     val isActive: Boolean,
+    val accumulatedMinutes: Long,      // 累计生效时间（分钟）
     val accumulatedAmount: Double,
+    val lastRecordTime: Long,          // 上次记录时间点
     val createdAt: Long
 )
 
@@ -138,7 +140,9 @@ fun FixedIncomeEntity.toBackup() = FixedIncomeBackup(
     startDate = startDate,
     endDate = endDate,
     isActive = isActive,
+    accumulatedMinutes = accumulatedMinutes,
     accumulatedAmount = accumulatedAmount,
+    lastRecordTime = lastRecordTime,
     createdAt = createdAt
 )
 

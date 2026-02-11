@@ -1,6 +1,7 @@
 package com.example.funnyexpensetracking.ui.transaction
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Context
 import android.text.Editable
 import android.text.TextWatcher
@@ -8,7 +9,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
 import com.example.funnyexpensetracking.R
-import com.example.funnyexpensetracking.domain.model.FixedIncome
 import com.example.funnyexpensetracking.domain.model.FixedIncomeFrequency
 import com.example.funnyexpensetracking.domain.model.FixedIncomeType
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -22,22 +22,26 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * 添加/编辑固定收支的底部弹窗
- * 固定收支以月/周/日/年为单位，系统会计算每分钟的平均值来实时更新资产
+ * 添加固定收支的底部弹窗
+ *
+ * 必填项：名称、金额、类型、频率、开始日期
+ * 选填项：结束日期
+ *
+ * 条目新增后不可编辑
  */
 class AddFixedIncomeBottomSheet(
     context: Context,
-    private val editingFixedIncome: FixedIncome? = null,
-    private val onSave: (name: String, amount: Double, type: FixedIncomeType, frequency: FixedIncomeFrequency, startDate: Long, accumulatedAmount: Double) -> Unit,
+    private val onSave: (name: String, amount: Double, type: FixedIncomeType, frequency: FixedIncomeFrequency, startDate: Long, endDate: Long?) -> Unit,
     private val onDismiss: () -> Unit
 ) : BottomSheetDialog(context) {
 
-    private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
+    private val dateTimeFormat = SimpleDateFormat("yyyy年MM月dd日 HH:mm", Locale.CHINA)
     private val decimalFormat = DecimalFormat("0.0000")
 
     private var selectedType: FixedIncomeType = FixedIncomeType.EXPENSE
     private var selectedFrequency: FixedIncomeFrequency = FixedIncomeFrequency.MONTHLY
-    private var selectedStartDate: Long = System.currentTimeMillis()
+    private var selectedStartDate: Long = getCurrentMinuteTimestamp()
+    private var selectedEndDate: Long? = null
 
     private lateinit var tvPerMinute: TextView
     private lateinit var etAmount: TextInputEditText
@@ -47,10 +51,6 @@ class AddFixedIncomeBottomSheet(
         setContentView(view)
 
         setupViews(view)
-
-        // 如果是编辑模式，填充数据
-        editingFixedIncome?.let { fillEditingData(view, it) }
-
         setOnDismissListener { onDismiss() }
     }
 
@@ -63,11 +63,18 @@ class AddFixedIncomeBottomSheet(
         val chipGroupFrequency = view.findViewById<ChipGroup>(R.id.chipGroupFrequency)
         tvPerMinute = view.findViewById(R.id.tvPerMinute)
         val etStartDate = view.findViewById<TextInputEditText>(R.id.etStartDate)
-        val etAccumulatedAmount = view.findViewById<TextInputEditText>(R.id.etAccumulatedAmount)
+        val tilEndDate = view.findViewById<TextInputLayout>(R.id.tilEndDate)
+        val etEndDate = view.findViewById<TextInputEditText>(R.id.etEndDate)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSave)
 
+        // 隐藏累计金额输入框（如果存在）
+        view.findViewById<View>(R.id.tilAccumulatedAmount)?.visibility = View.GONE
+
         // 设置默认开始日期
-        etStartDate.setText(dateFormat.format(Date(selectedStartDate)))
+        etStartDate.setText(dateTimeFormat.format(Date(selectedStartDate)))
+
+        // 设置结束日期提示
+        etEndDate?.hint = "可选，留空表示持续"
 
         // 类型切换
         toggleType.check(R.id.btnExpense)
@@ -101,9 +108,28 @@ class AddFixedIncomeBottomSheet(
             }
         }
 
-        // 开始日期选择
+        // 开始日期选择（精确到分钟）
         etStartDate.setOnClickListener {
-            showDatePicker(etStartDate)
+            showDateTimePicker(selectedStartDate) { timestamp ->
+                selectedStartDate = timestamp
+                etStartDate.setText(dateTimeFormat.format(Date(selectedStartDate)))
+            }
+        }
+
+        // 结束日期选择（精确到分钟）
+        etEndDate?.setOnClickListener {
+            val initialTime = selectedEndDate ?: (selectedStartDate + 30L * 24 * 60 * 60 * 1000) // 默认开始日期后30天
+            showDateTimePicker(initialTime) { timestamp ->
+                selectedEndDate = timestamp
+                etEndDate.setText(dateTimeFormat.format(Date(timestamp)))
+            }
+        }
+
+        // 清除结束日期按钮（长按清除）
+        etEndDate?.setOnLongClickListener {
+            selectedEndDate = null
+            etEndDate.setText("")
+            true
         }
 
         // 保存按钮
@@ -129,11 +155,14 @@ class AddFixedIncomeBottomSheet(
             }
             tilAmount.error = null
 
-            // 获取累计金额（默认为0）
-            val accumulatedAmountText = etAccumulatedAmount.text?.toString()
-            val accumulatedAmount = accumulatedAmountText?.toDoubleOrNull() ?: 0.0
+            // 验证结束日期（如果设置了，必须晚于开始日期）
+            if (selectedEndDate != null && selectedEndDate!! <= selectedStartDate) {
+                tilEndDate?.error = "结束日期必须晚于开始日期"
+                return@setOnClickListener
+            }
+            tilEndDate?.error = null
 
-            onSave(name, amount, selectedType, selectedFrequency, selectedStartDate, accumulatedAmount)
+            onSave(name, amount, selectedType, selectedFrequency, selectedStartDate, selectedEndDate)
             dismiss()
         }
 
@@ -157,16 +186,33 @@ class AddFixedIncomeBottomSheet(
         }
     }
 
-    private fun showDatePicker(etDate: TextInputEditText) {
+    /**
+     * 显示日期时间选择器（精确到分钟）
+     */
+    private fun showDateTimePicker(initialTime: Long, onSelected: (Long) -> Unit) {
         val calendar = Calendar.getInstance()
-        calendar.timeInMillis = selectedStartDate
+        calendar.timeInMillis = initialTime
 
+        // 先选日期
         DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
                 calendar.set(year, month, dayOfMonth)
-                selectedStartDate = calendar.timeInMillis
-                etDate.setText(dateFormat.format(Date(selectedStartDate)))
+
+                // 再选时间
+                TimePickerDialog(
+                    context,
+                    { _, hourOfDay, minute ->
+                        calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                        calendar.set(Calendar.MINUTE, minute)
+                        calendar.set(Calendar.SECOND, 0)
+                        calendar.set(Calendar.MILLISECOND, 0)
+                        onSelected(calendar.timeInMillis)
+                    },
+                    calendar.get(Calendar.HOUR_OF_DAY),
+                    calendar.get(Calendar.MINUTE),
+                    true // 24小时制
+                ).show()
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
@@ -174,57 +220,14 @@ class AddFixedIncomeBottomSheet(
         ).show()
     }
 
-    private fun fillEditingData(view: View, fixedIncome: FixedIncome) {
-        val toggleType = view.findViewById<MaterialButtonToggleGroup>(R.id.toggleType)
-        val etName = view.findViewById<TextInputEditText>(R.id.etName)
-        val etAmount = view.findViewById<TextInputEditText>(R.id.etAmount)
-        val chipGroupFrequency = view.findViewById<ChipGroup>(R.id.chipGroupFrequency)
-        val etStartDate = view.findViewById<TextInputEditText>(R.id.etStartDate)
-        val etAccumulatedAmount = view.findViewById<TextInputEditText>(R.id.etAccumulatedAmount)
-        val btnSave = view.findViewById<MaterialButton>(R.id.btnSave)
-
-        selectedType = fixedIncome.type
-        selectedFrequency = fixedIncome.frequency
-        selectedStartDate = fixedIncome.startDate
-
-        // 设置类型
-        toggleType.check(if (fixedIncome.type == FixedIncomeType.INCOME) R.id.btnIncome else R.id.btnExpense)
-
-        // 设置名称和金额
-        etName.setText(fixedIncome.name)
-        etAmount.setText(fixedIncome.amount.toString())
-
-        // 设置累计金额
-        if (fixedIncome.accumulatedAmount > 0) {
-            etAccumulatedAmount.setText(fixedIncome.accumulatedAmount.toString())
-        }
-
-        // 设置频率
-        val frequencyChipId = when (fixedIncome.frequency) {
-            FixedIncomeFrequency.DAILY -> R.id.chipDaily
-            FixedIncomeFrequency.WEEKLY -> R.id.chipWeekly
-            FixedIncomeFrequency.MONTHLY -> R.id.chipMonthly
-            FixedIncomeFrequency.YEARLY -> R.id.chipYearly
-        }
-        chipGroupFrequency.check(frequencyChipId)
-
-        // 设置开始日期
-        etStartDate.setText(dateFormat.format(Date(fixedIncome.startDate)))
-
-        // 更改按钮文字
-        btnSave.text = "更新"
-
-        // 更新每分钟显示
-        updatePerMinuteDisplay()
-    }
-
-    private fun FixedIncomeFrequency.toMinuteMultiplier(): Double {
-        return when (this) {
-            FixedIncomeFrequency.DAILY -> 1.0 / (24 * 60)
-            FixedIncomeFrequency.WEEKLY -> 1.0 / (7 * 24 * 60)
-            FixedIncomeFrequency.MONTHLY -> 1.0 / (30 * 24 * 60)
-            FixedIncomeFrequency.YEARLY -> 1.0 / (365 * 24 * 60)
-        }
+    /**
+     * 获取当前分钟的时间戳（精确到分钟）
+     */
+    private fun getCurrentMinuteTimestamp(): Long {
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        return calendar.timeInMillis
     }
 }
 

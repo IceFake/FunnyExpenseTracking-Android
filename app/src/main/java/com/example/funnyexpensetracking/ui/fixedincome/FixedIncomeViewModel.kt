@@ -15,10 +15,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 /**
  * 固定收支ViewModel
+ *
+ * 功能逻辑：
+ * - 新增条目时，必填项（名称，金额，类型，频率，开始日期），选填项（结束日期）
+ * - 条目新增后不可编辑，但可以长按条目选择停用或者删除
  */
 @HiltViewModel
 class FixedIncomeViewModel @Inject constructor(
@@ -40,15 +45,16 @@ class FixedIncomeViewModel @Inject constructor(
 
         fixedIncomeDao.getAllFixedIncomes()
             .onEach { entities ->
+                val currentTime = getCurrentMinuteTimestamp()
                 val fixedIncomes = entities.map { it.toDomainModel() }
 
-                // 计算每分钟收入/支出
+                // 计算每分钟收入/支出（只统计当前生效的条目）
                 val incomePerMinute = fixedIncomes
-                    .filter { it.type == FixedIncomeType.INCOME && it.isActive }
+                    .filter { it.type == FixedIncomeType.INCOME && it.isEffectiveAt(currentTime) }
                     .sumOf { it.getAmountPerMinute() }
 
                 val expensePerMinute = fixedIncomes
-                    .filter { it.type == FixedIncomeType.EXPENSE && it.isActive }
+                    .filter { it.type == FixedIncomeType.EXPENSE && it.isEffectiveAt(currentTime) }
                     .sumOf { it.getAmountPerMinute() }
 
                 val netPerMinute = incomePerMinute - expensePerMinute
@@ -94,26 +100,25 @@ class FixedIncomeViewModel @Inject constructor(
      * 显示添加弹窗
      */
     fun showAddDialog() {
-        updateState { copy(showAddDialog = true, editingFixedIncome = null) }
+        updateState { copy(showAddDialog = true) }
     }
 
     /**
      * 隐藏添加弹窗
      */
     fun hideAddDialog() {
-        updateState { copy(showAddDialog = false, editingFixedIncome = null) }
+        updateState { copy(showAddDialog = false) }
         sendEvent(FixedIncomeUiEvent.DismissDialog)
     }
 
     /**
-     * 编辑固定收支
-     */
-    fun editFixedIncome(fixedIncome: FixedIncome) {
-        updateState { copy(showAddDialog = true, editingFixedIncome = fixedIncome) }
-    }
-
-    /**
      * 添加固定收支
+     * @param name 名称
+     * @param amount 周期金额
+     * @param type 类型（收入/支出）
+     * @param frequency 频率（DAILY/WEEKLY/MONTHLY/YEARLY）
+     * @param startDate 开始日期（精确至分钟）
+     * @param endDate 结束日期（精确至分钟，可为空表示持续）
      */
     fun addFixedIncome(
         name: String,
@@ -121,18 +126,24 @@ class FixedIncomeViewModel @Inject constructor(
         type: FixedIncomeType,
         frequency: FixedIncomeFrequency,
         startDate: Long,
-        accumulatedAmount: Double = 0.0
+        endDate: Long? = null
     ) {
         viewModelScope.launch {
             try {
+                val currentTime = getCurrentMinuteTimestamp()
+
                 val entity = FixedIncomeEntity(
                     name = name,
                     amount = amount,
                     type = type.toEntityType(),
                     frequency = frequency.toEntityFrequency(),
                     startDate = startDate,
+                    endDate = endDate,
                     isActive = true,
-                    accumulatedAmount = accumulatedAmount
+                    accumulatedMinutes = 0,
+                    accumulatedAmount = 0.0,
+                    lastRecordTime = currentTime,  // 初始化为当前时间
+                    createdAt = System.currentTimeMillis()
                 )
                 fixedIncomeDao.insert(entity)
 
@@ -151,74 +162,12 @@ class FixedIncomeViewModel @Inject constructor(
     }
 
     /**
-     * 更新固定收支
-     */
-    fun updateFixedIncome(
-        id: Long,
-        name: String,
-        amount: Double,
-        type: FixedIncomeType,
-        frequency: FixedIncomeFrequency,
-        startDate: Long,
-        accumulatedAmount: Double = 0.0
-    ) {
-        viewModelScope.launch {
-            try {
-                val existingEntity = fixedIncomeDao.getById(id)
-                val oldAccumulatedAmount = existingEntity?.accumulatedAmount ?: 0.0
-                val isIncome = type == FixedIncomeType.INCOME
-
-                val entity = FixedIncomeEntity(
-                    id = id,
-                    name = name,
-                    amount = amount,
-                    type = type.toEntityType(),
-                    frequency = frequency.toEntityFrequency(),
-                    startDate = startDate,
-                    isActive = existingEntity?.isActive ?: true,
-                    accumulatedAmount = accumulatedAmount,
-                    createdAt = existingEntity?.createdAt ?: System.currentTimeMillis()
-                )
-                fixedIncomeDao.update(entity)
-
-                // 如果累计金额发生变化，更新资产
-                if (oldAccumulatedAmount != accumulatedAmount) {
-                    realtimeAssetCalculator.onAccumulatedAmountChanged(
-                        oldAccumulatedAmount = oldAccumulatedAmount,
-                        newAccumulatedAmount = accumulatedAmount,
-                        isIncome = isIncome
-                    )
-                }
-
-                // 重新计算资产（固定收支其他参数变化也会影响每分钟变动率）
-                realtimeAssetCalculator.recalculateAsset()
-
-                hideAddDialog()
-                sendEvent(FixedIncomeUiEvent.FixedIncomeUpdated)
-                sendEvent(FixedIncomeUiEvent.ShowMessage("更新成功"))
-            } catch (e: Exception) {
-                sendEvent(FixedIncomeUiEvent.ShowMessage("更新失败: ${e.message}"))
-            }
-        }
-    }
-
-    /**
      * 删除固定收支
      */
     fun deleteFixedIncome(fixedIncome: FixedIncome) {
         viewModelScope.launch {
             try {
-                val entity = FixedIncomeEntity(
-                    id = fixedIncome.id,
-                    name = fixedIncome.name,
-                    amount = fixedIncome.amount,
-                    type = fixedIncome.type.toEntityType(),
-                    frequency = fixedIncome.frequency.toEntityFrequency(),
-                    startDate = fixedIncome.startDate,
-                    endDate = fixedIncome.endDate,
-                    isActive = fixedIncome.isActive
-                )
-                fixedIncomeDao.delete(entity)
+                fixedIncomeDao.deleteById(fixedIncome.id)
 
                 // 重新计算资产
                 realtimeAssetCalculator.recalculateAsset()
@@ -232,22 +181,31 @@ class FixedIncomeViewModel @Inject constructor(
     }
 
     /**
-     * 切换固定收支启用状态
+     * 停用固定收支
      */
-    fun toggleFixedIncomeStatus(fixedIncome: FixedIncome) {
+    fun deactivateFixedIncome(fixedIncome: FixedIncome) {
         viewModelScope.launch {
             try {
-                fixedIncomeDao.updateActiveStatus(fixedIncome.id, !fixedIncome.isActive)
+                fixedIncomeDao.updateActiveStatus(fixedIncome.id, false)
 
                 // 重新计算资产
                 realtimeAssetCalculator.recalculateAsset()
 
-                val statusText = if (fixedIncome.isActive) "已停用" else "已启用"
-                sendEvent(FixedIncomeUiEvent.ShowMessage(statusText))
+                sendEvent(FixedIncomeUiEvent.ShowMessage("已停用「${fixedIncome.name}」"))
             } catch (e: Exception) {
                 sendEvent(FixedIncomeUiEvent.ShowMessage("操作失败: ${e.message}"))
             }
         }
+    }
+
+    /**
+     * 获取当前分钟的时间戳
+     */
+    private fun getCurrentMinuteTimestamp(): Long {
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        return calendar.timeInMillis
     }
 
     // ========== 类型转换 ==========
@@ -262,7 +220,9 @@ class FixedIncomeViewModel @Inject constructor(
             startDate = startDate,
             endDate = endDate,
             isActive = isActive,
-            accumulatedAmount = accumulatedAmount
+            accumulatedMinutes = accumulatedMinutes,
+            accumulatedAmount = accumulatedAmount,
+            lastRecordTime = lastRecordTime
         )
     }
 
