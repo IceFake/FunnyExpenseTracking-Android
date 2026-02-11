@@ -1,6 +1,5 @@
 package com.example.funnyexpensetracking.ui.transaction
 
-import android.app.DatePickerDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -23,7 +22,6 @@ import com.google.android.material.card.MaterialCardView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.util.*
 
 /**
  * 记账Fragment
@@ -76,13 +74,13 @@ class TransactionFragment : Fragment() {
         }
 
         binding.btnFixedIncome.setOnClickListener {
-            navigateToFixedIncome()
+            navigateToStatistics()
         }
     }
 
-    private fun navigateToFixedIncome() {
+    private fun navigateToStatistics() {
         parentFragmentManager.beginTransaction()
-            .replace(R.id.fragmentContainer, com.example.funnyexpensetracking.ui.fixedincome.FixedIncomeFragment())
+            .replace(R.id.fragmentContainer, com.example.funnyexpensetracking.ui.statistics.StatisticsFragment())
             .addToBackStack(null)
             .commit()
     }
@@ -126,8 +124,6 @@ class TransactionFragment : Fragment() {
                     // 显示添加对话框（只在状态变为true时显示一次）
                     if (state.showAddDialog && addTransactionDialog?.isShowing != true) {
                         showAddTransactionDialog(state.editingTransaction)
-                        // 立即重置状态，防止重复显示
-                        viewModel.hideAddDialog()
                     }
 
                     // 显示添加账户对话框
@@ -246,7 +242,8 @@ class TransactionFragment : Fragment() {
                 }
             },
             onDismiss = {
-                // 状态已在显示弹窗时重置，这里只需清理引用
+                // 对话框关闭时重置状态
+                viewModel.hideAddDialog()
                 addTransactionDialog = null
             },
             onAddAccount = {

@@ -394,24 +394,27 @@ class TransactionViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val oldTransaction = currentState().editingTransaction ?: return@launch
                 val existingEntity = transactionDao.getById(id)
+                if (existingEntity == null) {
+                    sendEvent(TransactionUiEvent.ShowMessage("交易记录不存在"))
+                    return@launch
+                }
 
                 // 回滚旧账户余额
-                val oldBalanceChange = if (oldTransaction.type == TransactionType.INCOME) -oldTransaction.amount else oldTransaction.amount
-                accountDao.updateBalance(oldTransaction.accountId, oldBalanceChange)
+                val oldBalanceChange = if (existingEntity.type == EntityTransactionType.INCOME) -existingEntity.amount else existingEntity.amount
+                accountDao.updateBalance(existingEntity.accountId, oldBalanceChange)
 
                 // 更新交易记录
                 val entity = TransactionEntity(
                     id = id,
-                    serverId = existingEntity?.serverId,
+                    serverId = existingEntity.serverId,
                     amount = amount,
                     type = type.toEntityType(),
                     category = category,
                     accountId = accountId,
                     note = note,
                     date = date,
-                    createdAt = existingEntity?.createdAt ?: System.currentTimeMillis(),
+                    createdAt = existingEntity.createdAt,
                     updatedAt = System.currentTimeMillis(),
                     syncStatus = SyncStatus.PENDING_UPLOAD
                 )

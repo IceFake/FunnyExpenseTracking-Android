@@ -55,6 +55,7 @@ class StatisticsViewModel @Inject constructor(
                     updateState {
                         copy(
                             currentStatistics = result.data,
+                            categoryStats = result.data?.categoryBreakdown ?: emptyList(),
                             chartUrl = result.data?.chartUrl,
                             loadingState = LoadingState.SUCCESS
                         )
@@ -71,7 +72,10 @@ class StatisticsViewModel @Inject constructor(
                 }
                 is Resource.Loading -> {}
             }
-            loadCategoryStatistics(year, month)
+            // 如果 categoryBreakdown 为空，尝试单独获取分类统计
+            if (currentState().categoryStats.isEmpty()) {
+                loadCategoryStatistics(year, month)
+            }
         }
     }
 
@@ -93,6 +97,7 @@ class StatisticsViewModel @Inject constructor(
                     updateState {
                         copy(
                             currentStatistics = result.data,
+                            categoryStats = result.data?.categoryBreakdown ?: emptyList(),
                             chartUrl = result.data?.chartUrl,
                             loadingState = LoadingState.SUCCESS
                         )
