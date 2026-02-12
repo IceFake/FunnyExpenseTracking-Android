@@ -213,7 +213,7 @@
             app:endIconMode="custom"
             app:endIconDrawable="@android:drawable/ic_menu_my_calendar"
             app:helperText="留空表示持续生效，长按可清除"
-            app:helperTextEnabled="true">
+            app:helperTextEnabled="false">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etEndDate"

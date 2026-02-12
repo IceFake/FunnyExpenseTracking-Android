@@ -547,7 +547,6 @@ class TransactionViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val currentTime = System.currentTimeMillis()
                 val entity = FixedIncomeEntity(
                     name = name,
                     amount = amount,
@@ -558,7 +557,7 @@ class TransactionViewModel @Inject constructor(
                     isActive = true,
                     accumulatedMinutes = 0,
                     accumulatedAmount = 0.0,
-                    lastRecordTime = currentTime
+                    lastRecordTime = startDate  // 初始化为开始时间，而不是当前时间
                 )
                 fixedIncomeDao.insert(entity)
 
