@@ -179,7 +179,7 @@
                 android:textSize="12sp"
                 app:cornerRadius="18dp"
                 app:strokeWidth="1dp"
-                app:icon="@android:drawable/ic_menu_sort_by_size"
+                app:icon="@drawable/ic_sort"
                 app:iconSize="16dp" />
 
         </LinearLayout>
@@ -237,7 +237,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:contentDescription="添加账单"
-        android:src="@android:drawable/ic_input_add"
+        android:src="@drawable/ic_add"
         app:backgroundTint="@color/design_default_color_primary"
         app:tint="@android:color/white" />
 

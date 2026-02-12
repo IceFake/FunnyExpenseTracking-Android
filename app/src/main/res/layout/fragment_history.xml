@@ -45,7 +45,7 @@
                         android:layout_width="36dp"
                         android:layout_height="36dp"
                         android:contentDescription="上一月"
-                        app:icon="@android:drawable/ic_media_previous"
+                        app:icon="@drawable/ic_previous"
                         app:iconTint="@android:color/white" />
 
                     <com.google.android.material.button.MaterialButton
@@ -66,7 +66,7 @@
                         android:layout_width="36dp"
                         android:layout_height="36dp"
                         android:contentDescription="下一月"
-                        app:icon="@android:drawable/ic_media_next"
+                        app:icon="@drawable/ic_next"
                         app:iconTint="@android:color/white" />
 
                 </LinearLayout>

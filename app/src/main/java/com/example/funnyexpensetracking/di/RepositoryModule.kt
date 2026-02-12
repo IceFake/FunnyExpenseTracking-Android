@@ -30,7 +30,7 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAIAnalysisRepository(
-        impl: AIAnalysisRepositoryImpl
+        impl: DeepSeekAnalysisRepositoryImpl
     ): AIAnalysisRepository
 
     @Binds

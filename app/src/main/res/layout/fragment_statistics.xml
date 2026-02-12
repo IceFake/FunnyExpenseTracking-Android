@@ -34,7 +34,7 @@
                         android:layout_width="40dp"
                         android:layout_height="40dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@android:drawable/ic_menu_revert"
+                        android:src="@drawable/ic_revert"
                         android:contentDescription="返回"
                         app:tint="@android:color/white" />
 
@@ -47,6 +47,16 @@
                         android:textColor="@android:color/white"
                         android:textSize="24sp"
                         android:textStyle="bold" />
+
+                    <ImageButton
+                        android:id="@+id/btnAiAnalysis"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_ai_analysis"
+                        android:contentDescription="AI分析"
+                        app:tint="@android:color/white"
+                        android:layout_marginEnd="4dp" />
 
                 </LinearLayout>
 
@@ -89,7 +99,7 @@
                         android:layout_width="36dp"
                         android:layout_height="36dp"
                         android:contentDescription="上一项"
-                        app:icon="@android:drawable/ic_media_previous"
+                        app:icon="@drawable/ic_previous"
                         app:iconTint="@android:color/white" />
 
                     <com.google.android.material.button.MaterialButton
@@ -110,7 +120,7 @@
                         android:layout_width="36dp"
                         android:layout_height="36dp"
                         android:contentDescription="下一项"
-                        app:icon="@android:drawable/ic_media_next"
+                        app:icon="@drawable/ic_next"
                         app:iconTint="@android:color/white" />
 
                 </LinearLayout>

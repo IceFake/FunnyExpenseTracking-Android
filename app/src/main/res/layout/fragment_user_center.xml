@@ -41,7 +41,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@android:drawable/ic_menu_upload"
+                android:src="@drawable/ic_upload"
                 android:contentDescription="导出数据" />
 
             <LinearLayout
@@ -70,7 +70,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@android:drawable/ic_media_play"
+                android:src="@drawable/ic_arrow_right"
                 android:rotation="0"
                 android:contentDescription="更多" />
 
@@ -99,7 +99,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@android:drawable/ic_menu_save"
+                android:src="@drawable/ic_save"
                 android:contentDescription="导入数据" />
 
             <LinearLayout
@@ -128,7 +128,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@android:drawable/ic_media_play"
+                android:src="@drawable/ic_arrow_right"
                 android:rotation="0"
                 android:contentDescription="更多" />
 
@@ -157,7 +157,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@android:drawable/ic_menu_delete"
+                android:src="@drawable/ic_delete"
                 android:contentDescription="清除数据" />
 
             <LinearLayout
@@ -186,7 +186,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@android:drawable/ic_media_play"
+                android:src="@drawable/ic_arrow_right"
                 android:rotation="0"
                 android:contentDescription="更多" />
 

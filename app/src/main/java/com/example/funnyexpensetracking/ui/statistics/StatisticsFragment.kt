@@ -12,9 +12,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.funnyexpensetracking.R
 import com.example.funnyexpensetracking.databinding.FragmentStatisticsBinding
 import com.example.funnyexpensetracking.domain.model.CategoryStat
 import com.example.funnyexpensetracking.domain.model.TransactionType
+import com.example.funnyexpensetracking.ui.aianalysis.AIAnalysisFragment
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.util.CurrencyUtil
 import com.github.mikephil.charting.animation.Easing
@@ -155,6 +157,10 @@ class StatisticsFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
+        binding.btnAiAnalysis.setOnClickListener {
+            navigateToAiAnalysis()
+        }
+
         binding.btnPrev.setOnClickListener {
             val state = viewModel.uiState.value
             if (state.isMonthlyView) {
@@ -172,6 +178,14 @@ class StatisticsFragment : Fragment() {
                 viewModel.selectYear(state.selectedYear + 1)
             }
         }
+    }
+
+    private fun navigateToAiAnalysis() {
+        val aiAnalysisFragment = AIAnalysisFragment()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, aiAnalysisFragment)
+            .addToBackStack("statistics")
+            .commit()
     }
 
     private fun observeState() {

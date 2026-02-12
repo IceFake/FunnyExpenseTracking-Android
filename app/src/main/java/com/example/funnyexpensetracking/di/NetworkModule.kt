@@ -25,6 +25,7 @@ object NetworkModule {
     private const val BASE_URL = "https://your-backend-server.com/api/" // TODO: 替换为实际后端地址
     private const val YAHOO_FINANCE_BASE_URL = "https://query1.finance.yahoo.com/"
     private const val SINA_FINANCE_BASE_URL = "https://hq.sinajs.cn/"
+    private const val DEEPSEEK_BASE_URL = "https://api.deepseek.com/"
 
     @Provides
     @Singleton
@@ -135,6 +136,32 @@ object NetworkModule {
             .build()
     }
 
+    /**
+     * DeepSeek API 专用 OkHttpClient
+     * 不添加日志拦截器以避免泄露API密钥
+     */
+    @Provides
+    @Singleton
+    @Named("deepSeekClient")
+    fun provideDeepSeekOkHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @Named("deepSeek")
+    fun provideDeepSeekRetrofit(@Named("deepSeekClient") okHttpClient: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(DEEPSEEK_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
     @Provides
     @Singleton
     fun provideExpenseApiService(@Named("default") retrofit: Retrofit): ExpenseApiService {
@@ -169,6 +196,18 @@ object NetworkModule {
     @Singleton
     fun provideSinaFinanceApiService(@Named("sinaFinance") retrofit: Retrofit): SinaFinanceApiService {
         return retrofit.create(SinaFinanceApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDeepSeekApiService(@Named("deepSeek") retrofit: Retrofit): DeepSeekApiService {
+        return retrofit.create(DeepSeekApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGson(): com.google.gson.Gson {
+        return com.google.gson.Gson()
     }
 }
 

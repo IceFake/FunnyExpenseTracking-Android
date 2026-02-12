@@ -193,7 +193,7 @@
             android:layout_marginTop="12dp"
             android:hint="开始日期"
             app:endIconMode="custom"
-            app:endIconDrawable="@android:drawable/ic_menu_my_calendar">
+            app:endIconDrawable="@drawable/ic_calendar">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etStartDate"
@@ -217,7 +217,7 @@
             android:layout_marginTop="12dp"
             android:hint="结束日期（可选）"
             app:endIconMode="custom"
-            app:endIconDrawable="@android:drawable/ic_menu_my_calendar">
+            app:endIconDrawable="@drawable/ic_calendar">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etEndDate"

@@ -7,9 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.funnyexpensetracking"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.funnyexpensetracking"
@@ -19,6 +17,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // API Keys
+        buildConfigField("String", "DEEPSEEK_API_KEY", "\"${project.properties["DEEPSEEK_API_KEY"] ?: ""}\"")
     }
 
     signingConfigs {
@@ -49,6 +50,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 

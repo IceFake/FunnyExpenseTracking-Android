@@ -2,22 +2,22 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/nav_home"
-        android:icon="@android:drawable/ic_menu_today"
+        android:icon="@drawable/ic_today"
         android:title="首页" />
     <item
         android:id="@+id/nav_calendar"
-        android:icon="@android:drawable/ic_menu_month"
+        android:icon="@drawable/ic_month"
         android:title="日历" />
     <item
         android:id="@+id/nav_fixed"
-        android:icon="@android:drawable/ic_menu_my_calendar"
+        android:icon="@drawable/ic_calendar"
         android:title="固定收支" />
     <item
         android:id="@+id/nav_investment"
-        android:icon="@android:drawable/ic_menu_manage"
+        android:icon="@drawable/ic_settings"
         android:title="理财" />
     <item
         android:id="@+id/nav_user_center"
-        android:icon="@android:drawable/ic_menu_myplaces"
+        android:icon="@drawable/ic_person"
         android:title="我的" />
 </menu>
