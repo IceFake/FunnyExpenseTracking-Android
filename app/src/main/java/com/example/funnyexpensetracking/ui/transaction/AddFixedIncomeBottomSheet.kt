@@ -73,8 +73,7 @@ class AddFixedIncomeBottomSheet(
         // 设置默认开始日期
         etStartDate.setText(dateTimeFormat.format(Date(selectedStartDate)))
 
-        // 设置结束日期提示
-        etEndDate?.hint = "可选，留空表示持续"
+        // 设置结束日期提示（已在布局中设置）
 
         // 类型切换
         toggleType.check(R.id.btnExpense)
