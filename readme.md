@@ -10,17 +10,18 @@
 </p>
 
 <p align="center">
-  <a href="#✨-核心功能">核心功能</a> •
-  <a href="#🚀-快速入门">快速入门</a> •
-  <a href="#📱-使用指南">使用指南</a> •
-  <a href="#🏗️-技术架构">技术架构</a> •
-  <a href="#🛠️-开发指南">开发指南</a> •
-  <a href="#🤝-贡献指南">贡献指南</a>
+  <a href="#-核心功能">核心功能</a> •
+  <a href="#-快速入门">快速入门</a> •
+  <a href="#-使用指南">使用指南</a> •
+  <a href="#-技术架构">技术架构</a> •
+  <a href="#-开发指南">开发指南</a> •
+  <a href="#-贡献指南">贡献指南</a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?style=for-the-badge&logo=kotlin" alt="Kotlin">
   <img src="https://img.shields.io/badge/Android-API24+-3DDC84?style=for-the-badge&logo=android" alt="Android">
+  <img src="https://img.shields.io/badge/Gradle-8.13.2-02303A?style=for-the-badge&logo=gradle" alt="Gradle">
   <img src="https://img.shields.io/badge/Architecture-MVVM%2BClean-009688?style=for-the-badge" alt="Architecture">
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License">
 </p>
@@ -30,54 +31,74 @@
 ## ✨ 核心功能
 
 ### 📝 智能记账模块
-- ✅ **多账户管理**：支持现金、银行卡、支付宝、微信支付等多种账户类型
-- ✅ **智能分类**：预置餐饮、交通、购物、娱乐、医疗、教育等10+支出类别，7+收入类别
-- ✅ **快捷记账**：通过底部弹窗快速添加收支记录，支持备注输入
-- 🔄 **语音输入**：语音转文字快速录入备注（开发中）
+- ✅ **多账户管理**：支持现金、银行卡、支付宝、微信支付等多种账户类型，可添加、编辑、设置默认账户
+- ✅ **智能分类**：预置餐饮、交通、购物、娱乐、医疗、教育、居住、通讯、服饰等 10 种支出类别，工资、奖金、投资收益、兼职、红包、退款等 7 种收入类别
+- ✅ **快捷记账**：通过底部弹窗快速添加收支记录，支持备注输入与日期选择
+- ✅ **编辑与删除**：支持对已有交易记录进行编辑和删除操作
+- ✅ **离线优先**：基于 Room 本地数据库存储，离线可用，带同步状态追踪（SyncStatus）
+- 📅 **语音输入**：语音转文字快速录入备注（规划中）
 - 📅 **批量操作**：批量编辑、删除交易记录（规划中）
-- ✅ **实时同步**：离线优先策略，网络恢复后自动同步数据
 
 ### 📅 日历视图
 - ✅ **可视化日历**：按月展示每日收支情况，颜色标记收支额度
-- ✅ **快速筛选**：点击任意日期查看当日详细交易记录
-- ✅ **日期导航**：支持月份切换，快速跳转到指定日期
-- ✅ **日统计**：每日收入、支出总额自动计算展示
+- ✅ **快速筛选**：点击任意日期弹出底部弹窗查看当日详细交易记录
+- ✅ **日期导航**：支持月份前后切换，快速跳转到指定日期
+- ✅ **月统计**：自动计算并展示本月总收入、总支出、月结余
 
 ### 💼 固定收支管理
 - ✅ **定期收支配置**：工资、房租、水电费、订阅服务等固定收支项管理
-- ✅ **多频率支持**：每日、每周、每月、每年等多种频率设置
-- ✅ **自动累计**：根据设置频率自动计算累计金额
-- 🔄 **实时提醒**：即将到期的固定收支提醒（开发中）
+- ✅ **多频率支持**：每日（DAILY）、每周（WEEKLY）、每月（MONTHLY）、每年（YEARLY）四种频率
+- ✅ **累计时间计算**：基于累计生效分钟数，按完整周期优先 + 剩余时间按比例计算累计金额
+- ✅ **结束日期**：支持设置结束日期，到期后自动停止累计
+- ✅ **启用/停用**：支持手动停用和启用固定收支条目
+- ✅ **分钟级速率展示**：展示每分钟总收入、总支出、净变动速率
+- ✅ **筛选功能**：支持按全部 / 仅收入 / 仅支出筛选
 
 ### 💹 投资理财追踪
-- ✅ **投资组合管理**：股票、基金、理财产品等投资记录管理
-- ✅ **实时行情**：集成Yahoo Finance API，实时获取股票价格
-- ✅ **收益计算**：自动计算投资收益、收益率、持仓市值
-- 🔄 **风险提示**：投资波动提醒，帮助用户把握投资时机（开发中）
+- ✅ **多品类投资管理**：支持股票（STOCK）及其他投资品类的记录
+- ✅ **持仓管理**：记录持仓数量、买入价格、投入金额
+- ✅ **实时行情同步**：集成 Yahoo Finance API，后台 WorkManager 定时同步股票最新价格
+- ✅ **收益计算**：自动计算持仓市值、浮动盈亏、收益率
+- ✅ **智能合并**：相同描述/代码的投资条目自动合并显示
+- ✅ **筛选功能**：支持按全部 / 股票 / 其他分类筛选
+- ✅ **编辑与删除**：支持修改持仓信息或删除投资条目
 
 ### 📊 实时资产计算
-- ✅ **分钟级精度**：每分钟计算一次资产变动，精确到分
-- ✅ **复合资产**：总资产 = 账户余额 + 固定收支累计 + 投资市值
-- ✅ **趋势分析**：资产变化趋势图表，可视化展示资产增长
-- ✅ **历史快照**：后台每15分钟自动保存资产快照，支持历史回顾
+- ✅ **分钟级精度**：每分钟重新计算一次资产变动
+- ✅ **复合资产公式**：总资产 = 各账户余额之和 + 固定收支累计净额 + 投资/理财当前市值
+- ✅ **实时数据流**：通过 Kotlin StateFlow 实时推送资产数据到 UI
+- ✅ **多源监听**：自动监听账户余额、固定收支、投资市值三大数据源变化并触发重算
+- ✅ **历史快照**：后台 WorkManager 每 15 分钟自动保存资产快照，支持历史回顾
 
-### 🤖 AI 智能分析
-- 🔄 **消费习惯分析**：基于OpenAI API分析消费模式，识别不合理支出（开发中）
-- 🔄 **智能建议**：提供个性化理财建议，优化消费结构（开发中）
-- 📅 **预测功能**：基于历史数据预测未来收支趋势（规划中）
+### 🤖 AI 智能分析（DeepSeek API）
+- ✅ **消费习惯分析**：基于 DeepSeek API（兼容 OpenAI 格式）分析消费模式，识别高频消费类别与消费偏好
+- ✅ **智能建议**：提供个性化省钱建议和理财优化建议
+- ✅ **趋势预测**：基于历史数据预测下月收支情况
+- ✅ **分析结果缓存**：分析结果本地持久化保存，下次打开可直接查看上次结果
+- ✅ **历史分析记录**：支持查看历史分析记录及详情
+- ✅ **API Key 管理**：应用内设置 DeepSeek API Key，支持动态配置
 - 📅 **自然语言交互**：支持自然语言查询财务状况（规划中）
 
 ### 📈 统计报表
-- ✅ **多维度统计**：按类别、时间、账户等多维度统计分析
-- ✅ **可视化图表**：饼图展示收支分类分布
-- 🔄 **趋势分析**：月度、年度收支趋势图表（开发中）
-- 📅 **导出功能**：支持报表导出为Excel/PDF格式（规划中）
+- ✅ **月度统计**：按月查看总收入、总支出、结余及分类占比
+- ✅ **年度统计**：按年查看全年收支概览
+- ✅ **分类饼图**：通过 MPAndroidChart 饼图可视化展示收支分类分布
+- ✅ **分类明细**：列表展示各分类金额及占比
+- ✅ **月份/年份切换**：支持在月视图与年视图之间切换浏览
+- 📅 **趋势折线图**：月度、年度收支趋势图表（规划中）
+- 📅 **导出功能**：支持报表导出为 Excel/PDF 格式（规划中）
 
-### 🔄 数据管理
-- ✅ **本地备份**：一键备份所有数据到本地JSON文件
-- 🔄 **云端同步**：支持多设备数据同步（需配置后端服务器，开发中）
-- ✅ **数据恢复**：从备份文件恢复数据，防止数据丢失
-- ✅ **导入导出**：支持JSON格式数据导入导出
+### 📜 历史账单
+- ✅ **日账单查看**：查看指定日期的所有交易记录明细
+- ✅ **日收支统计**：展示当日收入、支出、结余
+- ✅ **记录删除**：支持删除历史交易记录
+
+### 👤 用户中心与数据管理
+- ✅ **数据导出**：一键导出所有数据为 JSON 格式文件
+- ✅ **数据导入**：从 JSON 备份文件恢复全部数据
+- ✅ **数据清除**：支持清空所有数据（谨慎操作）
+- ✅ **完整备份**：备份内容涵盖交易记录、账户、固定收支、投资、资产快照等全部数据
+- 🔄 **云端同步**：多设备数据同步（需配置后端服务器，架构已搭建）
 
 ---
 
@@ -85,9 +106,10 @@
 
 ### 环境要求
 - **开发工具**：Android Studio Ladybug (2024.2) 或更高版本
-- **JDK版本**：JDK 11 或更高版本
-- **Android SDK**：API 36 (Android 14)
-- **设备要求**：Android 7.0 (API 24) 及以上版本
+- **JDK 版本**：JDK 11 或更高版本
+- **Android SDK**：compileSdk 36
+- **最低系统**：Android 7.0（API 24）及以上
+- **Gradle**：8.13.2（Kotlin DSL）
 
 ### 获取项目
 ```bash
@@ -126,45 +148,46 @@ cd FunnyExpenseTracking-Android
 ## 📱 使用指南
 
 ### 1. 账户管理
-- **添加账户**：进入「用户中心」→「账户管理」→点击「+」添加新账户
-- **编辑账户**：进入账户管理页面，点击账户卡片进行编辑
-- **设置默认账户**：在账户编辑页面勾选「默认账户」，记账时自动选中
-- **账户排序**：长按账户卡片拖动调整显示顺序
+- **添加账户**：在记账首页通过「添加账户」对话框创建新账户
+- **编辑账户**：通过底部弹窗编辑账户名称、余额等信息
+- **设置默认账户**：记账时自动选中默认账户
 
 ### 2. 日常记账
-- **快速记账**：在首页点击右下角「+」按钮，弹出记账窗口
-- **选择分类**：从预设的10+支出类别或7+收入类别中选择
-- **选择账户**：从已添加的账户中选择交易账户
+- **快速记账**：在首页点击右下角「+」按钮，弹出底部弹窗（AddTransactionBottomSheet）
+- **选择类型**：切换收入 / 支出类型
+- **选择分类**：从 10 种支出类别或 7 种收入类别中选择
+- **选择账户**：从已添加的账户列表中选择
 - **添加备注**：输入交易备注信息（可选）
 - **设置日期**：支持选择过去或未来的交易日期
+- **编辑/删除**：对已有交易记录进行修改或删除
 
 ### 3. 固定收支管理
-- **添加快捷方式**：进入「固定收支」模块，点击「添加」按钮
-- **设置频率**：选择每日、每周、每月或每年等频率
-- **配置金额**：输入固定收入或支出金额
-- **查看累计**：系统自动计算并显示累计金额
-- **编辑删除**：长按固定收支项进行编辑或删除
+- **添加固定收支**：通过底部弹窗（AddFixedIncomeBottomSheet）添加固定收支条目
+- **设置频率**：选择每日、每周、每月或每年
+- **设置日期范围**：配置开始日期和可选的结束日期
+- **查看速率**：展示每分钟收入/支出速率和累计金额
+- **筛选查看**：按全部 / 仅收入 / 仅支出筛选固定收支列表
+- **启用/停用**：手动停用或重新启用固定收支条目
 
 ### 4. 投资管理
-- **添加投资**：进入「投资理财」模块，添加股票、基金等投资产品
-- **设置持仓**：输入持仓数量、买入价格
-- **实时行情**：系统自动从Yahoo Finance获取最新价格
+- **添加投资**：通过底部弹窗（AddInvestmentBottomSheet）录入投资产品
+- **设置持仓**：输入持仓数量、买入价格、投入金额
+- **实时行情**：系统通过 Yahoo Finance API 后台自动同步股票最新价格
 - **查看收益**：实时计算持仓市值、浮动盈亏、收益率
-- **更新持仓**：支持修改持仓数量或买入价格
+- **分类筛选**：按全部 / 股票 / 其他筛选投资列表
+- **编辑/删除**：修改持仓信息或删除投资条目
 
 ### 5. 数据查看与分析
-- **日历视图**：进入「日历」模块，按月查看每日收支情况
-- **日详情查看**：点击日历中的日期，查看当日详细交易记录
-- **统计报表**：进入「统计」模块，查看收支分类饼图
-- **资产总览**：在首页查看实时资产总额、今日收支情况
-- **历史记录**：查看所有交易记录，支持按时间筛选
+- **日历视图**：进入「日历」模块，按月查看每日收支情况，点击日期弹出底部弹窗查看日明细
+- **统计报表**：进入「统计」模块，通过饼图查看分类占比，支持月度/年度切换
+- **资产总览**：在首页查看实时总资产、今日收支、每分钟收支变动
+- **AI 分析**：进入「AI 分析」模块，一键调用 DeepSeek API 获取消费洞察与理财建议
+- **历史账单**：查看指定日期的所有交易记录
 
-### 6. 数据备份与同步
-- **手动备份**：进入「用户中心」→「数据管理」→「导出数据」
-- **备份文件**：选择保存位置，系统生成JSON格式备份文件
-- **数据恢复**：进入「数据管理」→「导入数据」，选择备份文件恢复
-- **数据清理**：支持清空所有数据（谨慎操作）
-- **云端同步**：需配置后端服务器地址（开发中）
+### 6. 数据备份与恢复
+- **导出数据**：进入「用户中心」→ 点击「导出数据」，生成 JSON 格式备份
+- **导入数据**：进入「用户中心」→ 点击「导入数据」，选择 JSON 备份文件恢复
+- **清除数据**：在用户中心点击「清除数据」清空所有本地数据（谨慎操作）
 
 ---
 
@@ -190,56 +213,154 @@ cd FunnyExpenseTracking-Android
 | 技术领域 | 具体技术 | 版本/说明 |
 |---------|---------|-----------|
 | **开发语言** | Kotlin | 2.0.21 |
-| **UI框架** | Jetpack Compose (规划中) + ViewBinding | Material Design 3 |
-| **架构模式** | MVVM + Clean Architecture + MVI | 状态驱动UI |
+| **UI 框架** | ViewBinding + Material Design 3 | Material 1.13.0 |
+| **架构模式** | MVVM + Clean Architecture + MVI | 状态驱动 UI（StateFlow + SharedFlow） |
 | **本地存储** | Room Database | 2.6.1 |
-| **网络请求** | Retrofit + OkHttp + Gson | 支持拦截器、日志 |
-| **异步处理** | Kotlin Coroutines + Flow | 协程 + 数据流 |
-| **依赖注入** | Hilt | 2.54 |
+| **网络请求** | Retrofit + OkHttp + Gson | Retrofit 2.11.0, OkHttp 4.12.0 |
+| **异步处理** | Kotlin Coroutines + Flow | 1.9.0 |
+| **依赖注入** | Hilt (Dagger) | 2.54 |
 | **后台任务** | WorkManager | 2.10.0 |
 | **图表库** | MPAndroidChart | v3.1.0 |
+| **导航组件** | Jetpack Navigation | 2.8.5 |
+| **AI 分析** | DeepSeek API（OpenAI 兼容格式） | deepseek-chat 模型 |
+| **股票行情** | Yahoo Finance API | 实时股价同步 |
+| **符号处理** | KSP (Kotlin Symbol Processing) | 2.0.21-1.0.28 |
 | **构建工具** | Gradle Kotlin DSL | 8.13.2 |
 
 ### 项目结构
 ```
 app/src/main/java/com/example/funnyexpensetracking/
+├── FunnyExpenseApp.kt              # Application类（Hilt入口）
+├── MainActivity.kt                 # 主Activity（单Activity架构）
 ├── di/                             # 依赖注入模块
-│   ├── AppModule.kt               # 应用级依赖
-│   ├── DatabaseModule.kt          # 数据库配置
-│   ├── NetworkModule.kt           # 网络配置
-│   └── RepositoryModule.kt        # Repository绑定
-├── data/                          # 数据层
+│   ├── AppModule.kt               # 应用级依赖（Gson、UserPreferences等）
+│   ├── DatabaseModule.kt          # Room数据库配置
+│   ├── NetworkModule.kt           # Retrofit/OkHttp网络配置
+│   └── RepositoryModule.kt        # Repository接口绑定
+├── data/                           # 数据层
 │   ├── local/                     # 本地数据源
+│   │   ├── AppDatabase.kt        # Room数据库定义
+│   │   ├── Converters.kt         # Room类型转换器
+│   │   ├── UserPreferencesManager.kt # SharedPreferences管理（API Key等）
 │   │   ├── dao/                   # Room数据访问对象
-│   │   ├── entity/                # 数据库实体
-│   │   └── AppDatabase.kt         # Room数据库
+│   │   │   ├── AccountDao.kt
+│   │   │   ├── AssetBaselineDao.kt
+│   │   │   ├── AssetSnapshotDao.kt
+│   │   │   ├── FixedIncomeDao.kt
+│   │   │   ├── InvestmentDao.kt
+│   │   │   ├── StockHoldingDao.kt
+│   │   │   ├── SyncMetadataDao.kt
+│   │   │   └── TransactionDao.kt
+│   │   └── entity/                # 数据库实体
+│   │       ├── AccountEntity.kt
+│   │       ├── AssetBaselineEntity.kt
+│   │       ├── AssetSnapshotEntity.kt
+│   │       ├── FixedIncomeEntity.kt
+│   │       ├── InvestmentEntity.kt
+│   │       ├── StockHoldingEntity.kt
+│   │       ├── SyncMetadataEntity.kt
+│   │       └── TransactionEntity.kt
 │   ├── remote/                    # 远程数据源
 │   │   ├── api/                   # Retrofit API接口
+│   │   │   ├── AIAnalysisApiService.kt
+│   │   │   ├── DeepSeekApiService.kt
+│   │   │   ├── ExpenseApiService.kt
+│   │   │   ├── OpenAIApiService.kt
+│   │   │   ├── StatisticsApiService.kt
+│   │   │   ├── StockApiService.kt
+│   │   │   └── YahooFinanceApiService.kt
 │   │   └── dto/                   # 网络传输对象
-│   └── repository/                # Repository实现
+│   ├── repository/                # Repository实现
+│   │   ├── AccountRepositoryImpl.kt
+│   │   ├── AIAnalysisRepositoryImpl.kt
+│   │   ├── AssetRepositoryImpl.kt
+│   │   ├── DataManagementRepositoryImpl.kt
+│   │   ├── DeepSeekAnalysisRepositoryImpl.kt
+│   │   ├── InvestmentRepositoryImpl.kt
+│   │   ├── StatisticsRepositoryImpl.kt
+│   │   ├── StockRepositoryImpl.kt
+│   │   └── TransactionRepositoryImpl.kt
+│   └── sync/                      # 数据同步
+│       └── SyncManager.kt
 ├── domain/                        # 领域层
 │   ├── model/                     # 领域模型
+│   │   ├── AIAnalysis.kt
+│   │   ├── AssetSummary.kt
+│   │   ├── BackupData.kt
+│   │   ├── FixedIncome.kt
+│   │   ├── Investment.kt
+│   │   ├── Statistics.kt
+│   │   ├── StockHolding.kt
+│   │   └── Transaction.kt
 │   ├── repository/                # Repository接口
 │   └── usecase/                   # 业务用例
+│       ├── RealtimeAssetCalculator.kt  # 实时资产计算器
+│       ├── ai/
+│       │   └── AIAnalysisUseCases.kt
+│       ├── asset/
+│       ├── statistics/
+│       ├── stock/
+│       └── transaction/
 ├── ui/                            # 表现层
 │   ├── common/                    # 通用组件
-│   │   └── BaseViewModel.kt       # 基础ViewModel
+│   │   └── BaseViewModel.kt      # 基础ViewModel（StateFlow + SharedFlow）
 │   ├── transaction/               # 记账模块
+│   │   ├── TransactionContract.kt
+│   │   ├── TransactionViewModel.kt
+│   │   ├── TransactionFragment.kt
+│   │   ├── DailyTransactionAdapter.kt
+│   │   ├── AddTransactionBottomSheet.kt
+│   │   ├── AddFixedIncomeBottomSheet.kt
+│   │   ├── AddAccountDialog.kt
+│   │   └── EditAccountBottomSheet.kt
 │   ├── calendar/                  # 日历模块
+│   │   ├── CalendarContract.kt
+│   │   ├── CalendarViewModel.kt
+│   │   ├── CalendarFragment.kt
+│   │   ├── CalendarAdapter.kt
+│   │   ├── DayDetailBottomSheet.kt
+│   │   └── DayDetailViewModel.kt
 │   ├── fixedincome/               # 固定收支模块
+│   │   ├── FixedIncomeContract.kt
+│   │   ├── FixedIncomeViewModel.kt
+│   │   ├── FixedIncomeFragment.kt
+│   │   └── FixedIncomeAdapter.kt
 │   ├── investment/                # 投资理财模块
+│   │   ├── InvestmentContract.kt
+│   │   ├── InvestmentViewModel.kt
+│   │   ├── InvestmentFragment.kt
+│   │   ├── InvestmentAdapter.kt
+│   │   └── AddInvestmentBottomSheet.kt
 │   ├── statistics/                # 统计模块
+│   │   ├── StatisticsContract.kt
+│   │   ├── StatisticsViewModel.kt
+│   │   ├── StatisticsFragment.kt
+│   │   └── CategoryStatAdapter.kt
 │   ├── aianalysis/                # AI分析模块
-│   ├── history/                   # 历史记录模块
+│   │   ├── AIAnalysisContract.kt
+│   │   ├── AIAnalysisViewModel.kt
+│   │   └── AIAnalysisFragment.kt
+│   ├── history/                   # 历史账单模块
+│   │   ├── HistoryContract.kt
+│   │   ├── HistoryViewModel.kt
+│   │   ├── HistoryFragment.kt
+│   │   └── TransactionAdapter.kt
 │   ├── usercenter/                # 用户中心模块
+│   │   ├── DataManagementContract.kt
+│   │   ├── UserCenterViewModel.kt
+│   │   └── UserCenterFragment.kt
 │   └── asset/                     # 资产管理模块
+│       ├── AssetContract.kt
+│       └── AssetViewModel.kt
 ├── worker/                        # 后台任务
-│   ├── AssetSnapshotWorker.kt     # 资产快照任务
-│   └── StockPriceSyncWorker.kt    # 股票价格同步
+│   ├── AssetSnapshotWorker.kt     # 资产快照定时保存（每15分钟）
+│   ├── DataSyncWorker.kt         # 数据同步任务
+│   └── StockPriceSyncWorker.kt   # 股票价格同步（每15分钟）
 └── util/                          # 工具类
-    ├── Resource.kt                # 网络结果封装
+    ├── Resource.kt                # 网络结果封装（Success/Error/Loading）
     ├── DateTimeUtil.kt            # 日期时间工具
-    └── CurrencyUtil.kt            # 货币格式化
+    ├── CurrencyUtil.kt            # 货币格式化
+    └── NetworkMonitor.kt          # 网络状态监测
 ```
 
 ---
@@ -252,34 +373,20 @@ app/src/main/java/com/example/funnyexpensetracking/
    private const val BASE_URL = "https://your-backend-server.com/api/"
    ```
 
-2. **API密钥配置**：在项目根目录创建 `local.properties`
-   ```properties
-   # OpenAI API密钥（AI分析功能）
-   OPENAI_API_KEY=your_openai_api_key_here
-   
-   # 股票API配置
-   YAHOO_FINANCE_API_KEY=optional_api_key
-   ```
+2. **DeepSeek API Key 配置**（AI 分析功能）：
+   - **方式一**：在应用内「AI 分析」页面点击「API Key 设置」按钮，直接输入 API Key
+   - **方式二**：API Key 存储在 `UserPreferencesManager`（SharedPreferences）中，持久化保存
+   - 获取 API Key：访问 [DeepSeek 开放平台](https://platform.deepseek.com/) 注册并创建
 
-3. **数据库配置**：Room数据库配置在 `DatabaseModule.kt`
+3. **数据库配置**：Room 数据库配置在 `DatabaseModule.kt`
    - 数据库名称：`funny_expense.db`
-   - 版本管理：自动迁移支持
+   - 支持自动迁移
 
 ### 高级配置
-1. **后台任务配置**：
-   - 资产快照频率：每15分钟（可配置）
-   - 股票同步频率：每15分钟（交易时段）
-   - 数据备份频率：每天凌晨2点
-
-2. **主题定制**：
-   - 支持深色/浅色主题切换
-   - 可自定义主色调
-   - 字体大小调节
-
-3. **通知设置**：
-   - 固定收支提醒
-   - 投资价格提醒
-   - 月度报告提醒
+1. **后台任务频率**：
+   - 资产快照保存：每 15 分钟（AssetSnapshotWorker）
+   - 股票价格同步：每 15 分钟（StockPriceSyncWorker）
+   - 数据同步：DataSyncWorker（需配置后端服务器）
 
 ---
 
@@ -385,42 +492,54 @@ docs(readme): update installation instructions
 
 - [📖 详细架构文档](ARCHITECTURE.md) - 深入了解项目架构设计
 - [🏗️ 项目架构详解](PROJECT_ARCHITECTURE.md) - 模块依赖和设计决策
-- [🤖 AI分析功能规划](docs/AI_ANALYSIS_TODO.md) - AI模块开发路线
-- [💼 固定收支逻辑说明](docs/FIXED_EXPENSE_LOGIC.md) - 固定收支计算逻辑
-- [👨‍💻 开发者指南](AGENTS.md) - 面向开发者的详细指南
+- [🤖 AI 分析功能实现指南](docs/AI_ANALYSIS_IMPLEMENTATION.md) - AI 模块完整实现方案
+- [🤖 AI 分析功能规划](docs/AI_ANALYSIS_TODO.md) - AI 模块开发路线
+- [🔗 DeepSeek API 接入教程](docs/DEEPSEEK_API_INTEGRATION_GUIDE.md) - Android 客户端接入 DeepSeek AI 详细教程
+- [💼 固定支出逻辑说明](docs/FIXED_EXPENSE_LOGIC.md) - 固定支出计算逻辑（v2.0 累计时间算法）
+- [💰 固定收支计算逻辑](docs/FIXED_INCOME_CALCULATION_LOGIC.md) - 固定收支完整计算逻辑文档
+- [👨‍💻 开发者指南](AGENTS.md) - 面向开发者和 AI 代理的详细指南
 
 ---
 
 ## 📋 开发路线图
 
 ### ✅ 已完成
-- [x] 基础记账功能（收支记录、分类管理）
-- [x] 多账户支持与管理
-- [x] 日历视图与日详情查看
-- [x] 固定收支管理与累计计算
-- [x] 投资理财模块与实时行情
-- [x] 实时资产计算与分钟级更新
-- [x] 数据本地存储（Room数据库）
-- [x] 后台定时任务（资产快照、价格同步）
-- [x] 统计图表（收支分类饼图）
-- [x] 数据备份恢复（JSON格式）
+- [x] 基础记账功能（收支记录、分类管理、收入/支出 17 种类别）
+- [x] 多账户支持与管理（添加、编辑账户）
+- [x] 日历视图与日详情弹窗查看
+- [x] 固定收支管理（多频率、累计时间计算、启用/停用、结束日期）
+- [x] 投资理财模块（多品类、持仓管理、智能合并显示）
+- [x] Yahoo Finance API 实时股票行情同步
+- [x] 实时资产计算（分钟级精度、多源监听、复合资产公式）
+- [x] AI 消费习惯分析（DeepSeek API，消费洞察 + 建议 + 预测）
+- [x] AI 分析结果缓存与历史记录
+- [x] 应用内 DeepSeek API Key 配置
+- [x] 统计图表（月度/年度、饼图分类分布、分类明细列表）
+- [x] 历史账单查看与管理
+- [x] 数据本地存储（Room 数据库，8 张核心表）
+- [x] 后台定时任务（资产快照 15 分钟、股价同步 15 分钟）
+- [x] 数据备份恢复（JSON 格式导入/导出/清除）
+- [x] 网络状态监测（NetworkMonitor）
+- [x] 数据同步状态追踪（SyncStatus、SyncMetadata）
+- [x] MVI 架构模式（BaseViewModel + StateFlow + SharedFlow）
 
 ### 🚧 进行中
-- [ ] AI智能分析功能开发
-- [ ] 数据云同步功能集成
-- [ ] 深色模式主题适配
-- [ ] 趋势分析图表开发
-- [ ] 投资风险评估功能
+- [ ] 数据云同步功能集成（SyncManager 架构已搭建）
+- [ ] 趋势分析图表开发（TrendStatistics 模型已定义）
 
 ### 📅 规划中
 - [ ] 多语言支持（中英文）
-- [ ] 数据导入/导出（CSV/Excel格式）
+- [ ] 深色模式主题适配
+- [ ] 数据导入/导出（CSV/Excel 格式）
 - [ ] 账单提醒与通知功能
 - [ ] 预算管理与超支预警
 - [ ] 家庭账户共享与协同记账
 - [ ] 微信/支付宝账单自动导入
 - [ ] 语音输入与智能识别
-- [ ] 收据拍照OCR识别
+- [ ] 收据拍照 OCR 识别
+- [ ] AI 自然语言查询财务状况
+- [ ] 投资风险评估与波动提醒
+- [ ] Jetpack Compose UI 迁移
 
 ---
 
