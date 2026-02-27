@@ -35,15 +35,15 @@ class DeepSeekAnalysisRepositoryImpl @Inject constructor(
         // 请在local.properties中添加DEEPSEEK_API_KEY=your_key_here
 
         private const val SYSTEM_PROMPT = """
-你是一个专业的个人财务分析师。请分析用户的消费记录，并以JSON格式返回分析结果。
+你是一个专业的个人财务分析师。请分析用户的消费记录，并以纯JSON格式返回分析结果。
 
 分析要求：
-1. 总结用户的整体消费情况
-2. 识别消费习惯和趋势
-3. 提供具体的省钱建议
+1. 总结用户的整体消费情况（中文，100-200字）
+2. 识别消费习惯和趋势（至少分析3个类别）
+3. 提供具体的省钱建议（至少3条）
 4. 预测下个月的收支情况
 
-请严格按照以下JSON格式返回结果：
+请严格按照以下JSON格式返回结果，不要添加任何Markdown标记、代码块符号或额外文字：
 {
     "summary": "总体分析摘要（100-200字）",
     "habits": [
@@ -67,12 +67,18 @@ class DeepSeekAnalysisRepositoryImpl @Inject constructor(
     }
 }
 
-只返回JSON，不要有其他文字。
+重要：只返回纯JSON，不要包含```json```或任何其他标记。
 """
     }
 
     override suspend fun analyzeHabits(): Resource<AIAnalysisResult> {
         return try {
+            // 检查API Key是否已配置
+            val apiKey = BuildConfig.DEEPSEEK_API_KEY
+            if (apiKey.isBlank()) {
+                return Resource.Error("DeepSeek API Key未配置，请在local.properties中添加DEEPSEEK_API_KEY=your_key_here")
+            }
+
             // 获取最近3个月的交易记录
             val threeMonthsAgo = Calendar.getInstance().apply {
                 add(Calendar.MONTH, -3)
@@ -88,7 +94,7 @@ class DeepSeekAnalysisRepositoryImpl @Inject constructor(
             // 构建用户消息
             val userMessage = buildAnalysisPrompt(transactions)
 
-            // 调用OpenAI API
+            // 调用DeepSeek API（使用JSON模式确保返回格式正确）
             val request = OpenAIChatRequest(
                 model = "deepseek-chat",
                 messages = listOf(
@@ -96,7 +102,8 @@ class DeepSeekAnalysisRepositoryImpl @Inject constructor(
                     OpenAIChatMessage(role = "user", content = userMessage)
                 ),
                 temperature = 0.7,
-                maxTokens = 1500
+                maxTokens = 2000,
+                responseFormat = ResponseFormat(type = "json_object")
             )
 
             val response = deepSeekApiService.createChatCompletion(
@@ -121,8 +128,22 @@ class DeepSeekAnalysisRepositoryImpl @Inject constructor(
                 Resource.Success(analysisResult)
             } else {
                 val errorBody = response.errorBody()?.string()
-                Resource.Error("API请求失败: ${response.code()} - $errorBody")
+                val errorMsg = when (response.code()) {
+                    401 -> "API Key无效，请检查DEEPSEEK_API_KEY配置"
+                    402 -> "DeepSeek账户余额不足，请充值后重试"
+                    429 -> "请求频率超限，请稍后重试"
+                    500 -> "DeepSeek服务端错误，请稍后重试"
+                    503 -> "DeepSeek服务繁忙，请稍后重试"
+                    else -> "API请求失败(${response.code()}): ${parseErrorMessage(errorBody) ?: response.message()}"
+                }
+                Resource.Error(errorMsg)
             }
+        } catch (e: java.net.SocketTimeoutException) {
+            Resource.Error("请求超时，DeepSeek API响应时间过长，请稍后重试")
+        } catch (e: java.net.UnknownHostException) {
+            Resource.Error("网络连接失败，请检查网络设置")
+        } catch (e: java.io.IOException) {
+            Resource.Error("网络异常: ${e.message ?: "连接中断"}")
         } catch (e: Exception) {
             Resource.Error("分析失败: ${e.message ?: "未知错误"}")
         }
@@ -261,14 +282,38 @@ ${transactions.sortedByDescending { it.date }.take(10)
      * 从文本中提取JSON
      */
     private fun extractJson(content: String): String {
+        var text = content.trim()
+
+        // 移除Markdown代码块标记（AI可能用```json ... ```包裹）
+        if (text.contains("```")) {
+            val codeBlockRegex = Regex("```(?:json)?\\s*\\n?(.*?)\\n?```", RegexOption.DOT_MATCHES_ALL)
+            val match = codeBlockRegex.find(text)
+            if (match != null) {
+                text = match.groupValues[1].trim()
+            }
+        }
+
         // 尝试找到JSON的开始和结束位置
-        val startIndex = content.indexOf('{')
-        val endIndex = content.lastIndexOf('}')
+        val startIndex = text.indexOf('{')
+        val endIndex = text.lastIndexOf('}')
 
         return if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
-            content.substring(startIndex, endIndex + 1)
+            text.substring(startIndex, endIndex + 1)
         } else {
-            content
+            text
+        }
+    }
+
+    /**
+     * 解析HTTP错误响应体中的错误消息
+     */
+    private fun parseErrorMessage(errorBody: String?): String? {
+        if (errorBody.isNullOrBlank()) return null
+        return try {
+            val errorResponse = gson.fromJson(errorBody, OpenAIChatResponse::class.java)
+            errorResponse.error?.message
+        } catch (_: Exception) {
+            errorBody.take(200) // 截取前200字符作为错误信息
         }
     }
 

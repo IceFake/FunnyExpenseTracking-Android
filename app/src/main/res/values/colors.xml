@@ -2,4 +2,9 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Tab颜色 -->
+    <color name="tab_unselected_text">#B3FFFFFF</color>  <!-- 70% 白色，未选中态：在蓝色背景上清晰可读 -->
+    <color name="tab_selected_text">#FFFFFFFF</color>    <!-- 纯白色，选中状态 -->
+    <color name="tab_indicator">#FFFFFF</color>           <!-- 纯白指示器，在蓝色背景上最高对比度 -->
 </resources>
