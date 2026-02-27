@@ -25,8 +25,25 @@ class AIAnalysisViewModel @Inject constructor(
     init {
         // 初始化时加载当前API Key（不能在initialState中访问，因为父类构造先于字段初始化）
         updateState { copy(currentApiKey = userPreferencesManager.getDeepSeekApiKey()) }
+        // 加载缓存的上次分析结果
+        loadCachedAnalysisResult()
         loadSuggestions()
         loadAnalysisHistory()
+    }
+
+    /**
+     * 加载缓存的上次分析结果
+     */
+    private fun loadCachedAnalysisResult() {
+        val cached = userPreferencesManager.getLastAIAnalysisResult()
+        if (cached != null) {
+            updateState {
+                copy(
+                    analysisResult = cached,
+                    loadingState = LoadingState.SUCCESS
+                )
+            }
+        }
     }
 
     /**
@@ -38,12 +55,17 @@ class AIAnalysisViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = aiAnalysisRepository.analyzeHabits()) {
                 is Resource.Success -> {
+                    val analysisData = result.data
                     updateState {
                         copy(
-                            analysisResult = result.data,
+                            analysisResult = analysisData,
                             isAnalyzing = false,
                             loadingState = LoadingState.SUCCESS
                         )
+                    }
+                    // 持久化保存分析结果
+                    if (analysisData != null) {
+                        userPreferencesManager.saveLastAIAnalysisResult(analysisData)
                     }
                     sendEvent(AIAnalysisUiEvent.AnalysisCompleted)
                     sendEvent(AIAnalysisUiEvent.ShowMessage("分析完成"))

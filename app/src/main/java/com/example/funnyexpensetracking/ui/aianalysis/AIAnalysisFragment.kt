@@ -53,13 +53,11 @@ class AIAnalysisFragment : Fragment() {
         setupViews()
         setupClickListeners()
         observeState()
-        // 自动触发AI分析
-        startAnalysis()
+        // 不再自动调用AI接口，由ViewModel加载缓存结果展示
     }
 
     private fun setupViews() {
-        // 初始化界面状态
-        showLoading()
+        // 初始界面状态由 observeState 中的 uiState 控制
     }
 
     private fun setupClickListeners() {
@@ -132,7 +130,8 @@ class AIAnalysisFragment : Fragment() {
                 showError(state.errorMessage ?: "分析失败")
             }
             else -> {
-                // IDLE状态，不做处理
+                // IDLE状态，提示用户点击刷新按钮开始分析
+                showEmpty()
             }
         }
     }
@@ -146,6 +145,15 @@ class AIAnalysisFragment : Fragment() {
         binding.errorLayout.isVisible = false
         binding.contentLayout.isVisible = false
         binding.btnRefresh.isVisible = false
+    }
+
+    private fun showEmpty() {
+        binding.loadingLayout.isVisible = false
+        binding.errorLayout.isVisible = true
+        binding.contentLayout.isVisible = false
+        binding.btnRefresh.isVisible = true
+
+        binding.tvError.text = "暂无分析结果，点击刷新按钮开始AI分析"
     }
 
     private fun showError(errorMessage: String) {
