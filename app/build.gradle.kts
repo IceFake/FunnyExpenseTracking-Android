@@ -1,19 +1,8 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
-}
-
-// 从 local.properties 读取 API Key
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.inputStream().use { stream ->
-        localProperties.load(stream)
-    }
 }
 
 android {
@@ -28,13 +17,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // API Keys - 优先从 local.properties 读取，其次从 gradle.properties，最后从环境变量
-        val deepSeekApiKey = localProperties.getProperty("DEEPSEEK_API_KEY")
-            ?: project.properties["DEEPSEEK_API_KEY"]?.toString()
-            ?: System.getenv("DEEPSEEK_API_KEY")
-            ?: ""
-        buildConfigField("String", "DEEPSEEK_API_KEY", "\"${deepSeekApiKey}\"")
     }
 
     signingConfigs {

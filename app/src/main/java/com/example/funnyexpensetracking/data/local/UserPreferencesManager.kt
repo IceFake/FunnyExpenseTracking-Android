@@ -34,8 +34,31 @@ class UserPreferencesManager @Inject constructor(
         return prefs.getLong(KEY_LAST_SELECTED_ACCOUNT_ID, 0L)
     }
 
+    /**
+     * 保存DeepSeek API Key
+     */
+    fun saveDeepSeekApiKey(apiKey: String) {
+        prefs.edit().putString(KEY_DEEPSEEK_API_KEY, apiKey).apply()
+    }
+
+    /**
+     * 获取DeepSeek API Key
+     * @return API Key，如果未设置则返回空字符串
+     */
+    fun getDeepSeekApiKey(): String {
+        return prefs.getString(KEY_DEEPSEEK_API_KEY, "") ?: ""
+    }
+
+    /**
+     * 检查是否已配置DeepSeek API Key
+     */
+    fun hasDeepSeekApiKey(): Boolean {
+        return getDeepSeekApiKey().isNotBlank()
+    }
+
     companion object {
         private const val PREFS_NAME = "funny_expense_tracking_prefs"
         private const val KEY_LAST_SELECTED_ACCOUNT_ID = "last_selected_account_id"
+        private const val KEY_DEEPSEEK_API_KEY = "deepseek_api_key"
     }
 }

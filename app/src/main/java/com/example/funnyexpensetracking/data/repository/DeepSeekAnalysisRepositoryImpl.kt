@@ -1,6 +1,6 @@
 package com.example.funnyexpensetracking.data.repository
 
-import com.example.funnyexpensetracking.BuildConfig
+import com.example.funnyexpensetracking.data.local.UserPreferencesManager
 import com.example.funnyexpensetracking.data.local.dao.TransactionDao
 import com.example.funnyexpensetracking.data.local.dao.FixedIncomeDao
 import com.example.funnyexpensetracking.data.remote.api.DeepSeekApiService
@@ -17,22 +17,20 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import com.example.funnyexpensetracking.data.local.entity.TransactionType as EntityTransactionType
 
-/**
- * 使用OpenAI API的AI分析Repository实现类
- * 直接调用OpenAI/ChatGPT API分析用户消费习惯
- */
 @Suppress("unused") // fixedIncomeDao 保留供将来扩展使用
 @Singleton
 class DeepSeekAnalysisRepositoryImpl @Inject constructor(
     private val deepSeekApiService: DeepSeekApiService,
     private val transactionDao: TransactionDao,
     private val fixedIncomeDao: FixedIncomeDao,
-    private val gson: Gson
+    private val gson: Gson,
+    private val userPreferencesManager: UserPreferencesManager
 ) : AIAnalysisRepository {
 
     companion object {
-        // API密钥通过BuildConfig.DEEPSEEK_API_KEY获取
-        // 请在local.properties中添加DEEPSEEK_API_KEY=your_key_here
+        // API密钥通过用户设置页面配置，持久化存储在SharedPreferences中
+        const val ERROR_API_KEY_MISSING = "API_KEY_MISSING"
+        const val ERROR_API_KEY_INVALID = "API_KEY_INVALID"
 
         private const val SYSTEM_PROMPT = """
 你是一个专业的个人财务分析师。请分析用户的消费记录，并以纯JSON格式返回分析结果。
@@ -74,9 +72,9 @@ class DeepSeekAnalysisRepositoryImpl @Inject constructor(
     override suspend fun analyzeHabits(): Resource<AIAnalysisResult> {
         return try {
             // 检查API Key是否已配置
-            val apiKey = BuildConfig.DEEPSEEK_API_KEY
+            val apiKey = userPreferencesManager.getDeepSeekApiKey()
             if (apiKey.isBlank()) {
-                return Resource.Error("DeepSeek API Key未配置，请在local.properties中添加DEEPSEEK_API_KEY=your_key_here")
+                return Resource.Error(ERROR_API_KEY_MISSING)
             }
 
             // 获取最近3个月的交易记录
@@ -107,7 +105,7 @@ class DeepSeekAnalysisRepositoryImpl @Inject constructor(
             )
 
             val response = deepSeekApiService.createChatCompletion(
-                authorization = "Bearer ${BuildConfig.DEEPSEEK_API_KEY}",
+                authorization = "Bearer $apiKey",
                 request = request
             )
 
@@ -129,7 +127,7 @@ class DeepSeekAnalysisRepositoryImpl @Inject constructor(
             } else {
                 val errorBody = response.errorBody()?.string()
                 val errorMsg = when (response.code()) {
-                    401 -> "API Key无效，请检查DEEPSEEK_API_KEY配置"
+                    401 -> ERROR_API_KEY_INVALID
                     402 -> "DeepSeek账户余额不足，请充值后重试"
                     429 -> "请求频率超限，请稍后重试"
                     500 -> "DeepSeek服务端错误，请稍后重试"
