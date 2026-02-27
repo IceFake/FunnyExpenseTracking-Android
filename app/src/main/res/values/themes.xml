@@ -6,4 +6,17 @@
     </style>
 
     <style name="Theme.FunnyExpenseTrackingAndroid" parent="Base.Theme.FunnyExpenseTrackingAndroid" />
+
+    <!-- Tab文字样式 -->
+    <style name="TabTextStyle" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="textAllCaps">false</item>
+    </style>
+
+    <!-- 透明背景TabLayout样式，覆盖Material3默认的surface背景 -->
+    <style name="TransparentTabLayout" parent="Widget.Material3.TabLayout">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+    </style>
 </resources>

@@ -17,9 +17,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // API Keys
-        buildConfigField("String", "DEEPSEEK_API_KEY", "\"${project.properties["DEEPSEEK_API_KEY"] ?: ""}\"")
     }
 
     signingConfigs {

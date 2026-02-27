@@ -15,7 +15,9 @@ data class AIAnalysisUiState(
     val historyResults: List<AIAnalysisResult> = emptyList(),
     val loadingState: LoadingState = LoadingState.IDLE,
     val isAnalyzing: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val showApiKeyDialog: Boolean = false,
+    val currentApiKey: String = ""
 ) : UiState
 
 /**
@@ -24,5 +26,6 @@ data class AIAnalysisUiState(
 sealed class AIAnalysisUiEvent : UiEvent {
     data class ShowMessage(val message: String) : AIAnalysisUiEvent()
     object AnalysisCompleted : AIAnalysisUiEvent()
+    object ShowApiKeyDialog : AIAnalysisUiEvent()
 }
 

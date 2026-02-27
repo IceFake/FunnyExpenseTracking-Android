@@ -139,14 +139,39 @@ object NetworkModule {
     /**
      * DeepSeek API 专用 OkHttpClient
      * 不添加日志拦截器以避免泄露API密钥
+     * 使用更长的超时时间（AI生成可能较慢）
+     * 添加重试拦截器处理瞬时错误（429/500/503）
      */
     @Provides
     @Singleton
     @Named("deepSeekClient")
     fun provideDeepSeekOkHttpClient(): OkHttpClient {
+        // 重试拦截器：处理限流和服务端瞬时错误
+        val retryInterceptor = Interceptor { chain ->
+            var response = chain.proceed(chain.request())
+            var tryCount = 0
+            val maxRetries = 2
+
+            while (!response.isSuccessful && tryCount < maxRetries
+                && response.code in listOf(429, 500, 503)
+            ) {
+                tryCount++
+                val waitTime = (Math.pow(2.0, tryCount.toDouble()) * 1000).toLong()
+                try {
+                    Thread.sleep(waitTime)
+                } catch (_: InterruptedException) {
+                    break
+                }
+                response.close()
+                response = chain.proceed(chain.request())
+            }
+            response
+        }
+
         return OkHttpClient.Builder()
+            .addInterceptor(retryInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)  // AI生成可能需要较长时间
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
