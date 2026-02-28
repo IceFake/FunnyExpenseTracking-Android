@@ -77,7 +77,7 @@
 - ✅ **分析结果缓存**：分析结果本地持久化保存，下次打开可直接查看上次结果
 - ✅ **历史分析记录**：支持查看历史分析记录及详情
 - ✅ **API Key 管理**：应用内设置 DeepSeek API Key，支持动态配置
-- ✅ **自然语言交互**：支持自然语言查询财务状况，聊天式对话界面，支持多轮对话上下文关联
+- ✅ **自然语言交互**：支持自然语言查询财务状况，聊天式对话界面，支持多轮对话上下文关联，AI 回复支持 Markdown 格式渲染
 
 ### 📈 统计报表
 - ✅ **月度统计**：按月查看总收入、总支出、结余及分类占比
@@ -114,7 +114,7 @@
 ### 获取项目
 ```bash
 # 克隆项目到本地
-git clone https://github.com/yourusername/FunnyExpenseTracking-Android.git
+git clone https://github.com/IceFake/FunnyExpenseTracking-Android.git
 cd FunnyExpenseTracking-Android
 
 # 同步依赖（可选）
@@ -221,6 +221,7 @@ cd FunnyExpenseTracking-Android
 | **依赖注入** | Hilt (Dagger) | 2.54 |
 | **后台任务** | WorkManager | 2.10.0 |
 | **图表库** | MPAndroidChart | v3.1.0 |
+| **Markdown 渲染** | Markwon | 4.6.2 |
 | **导航组件** | Jetpack Navigation | 2.8.5 |
 | **AI 分析** | DeepSeek API（OpenAI 兼容格式） | deepseek-chat 模型 |
 | **股票行情** | Yahoo Finance API | 实时股价同步 |
@@ -400,7 +401,7 @@ app/src/main/java/com/example/funnyexpensetracking/
 ### 开发环境搭建
 ```bash
 # 1. 克隆项目
-git clone https://github.com/yourusername/FunnyExpenseTracking-Android.git
+git clone https://github.com/IceFake/FunnyExpenseTracking-Android.git
 
 # 2. 打开Android Studio
 # 3. 导入项目
@@ -527,6 +528,7 @@ docs(readme): update installation instructions
 - [x] 网络状态监测（NetworkMonitor）
 - [x] 数据同步状态追踪（SyncStatus、SyncMetadata）
 - [x] MVI 架构模式（BaseViewModel + StateFlow + SharedFlow）
+- [x] AI 自然语言查询财务状况（FinancialQuery 模块，多轮对话 + Markdown 渲染）
 
 ### 🚧 进行中
 - [ ] 数据云同步功能集成（SyncManager 架构已搭建）
@@ -542,7 +544,6 @@ docs(readme): update installation instructions
 - [ ] 微信/支付宝账单自动导入
 - [ ] 语音输入与智能识别
 - [ ] 收据拍照 OCR 识别
-- [ ] AI 自然语言查询财务状况
 - [ ] 投资风险评估与波动提醒
 - [ ] Jetpack Compose UI 迁移
 
@@ -565,5 +566,5 @@ docs(readme): update installation instructions
 </p>
 
 <p align="center">
-  <sub>如有问题或建议，请提交 <a href="https://github.com/yourusername/FunnyExpenseTracking-Android/issues">Issue</a></sub>
+  <sub>如有问题或建议，请提交 <a href="https://github.com/IceFake/FunnyExpenseTracking-Android/issues">Issue</a></sub>
 </p>
