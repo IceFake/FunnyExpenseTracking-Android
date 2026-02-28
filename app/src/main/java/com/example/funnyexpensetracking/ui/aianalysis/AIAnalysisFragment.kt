@@ -76,6 +76,18 @@ class AIAnalysisFragment : Fragment() {
         binding.btnApiKeySetting.setOnClickListener {
             viewModel.openApiKeyDialog()
         }
+
+        binding.btnFinancialQuery.setOnClickListener {
+            navigateToFinancialQuery()
+        }
+    }
+
+    private fun navigateToFinancialQuery() {
+        val fragment = com.example.funnyexpensetracking.ui.financialquery.FinancialQueryFragment()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, fragment)
+            .addToBackStack("ai_analysis")
+            .commit()
     }
 
     private fun observeState() {

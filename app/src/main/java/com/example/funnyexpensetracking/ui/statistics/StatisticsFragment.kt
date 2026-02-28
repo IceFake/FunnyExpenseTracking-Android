@@ -17,6 +17,7 @@ import com.example.funnyexpensetracking.databinding.FragmentStatisticsBinding
 import com.example.funnyexpensetracking.domain.model.CategoryStat
 import com.example.funnyexpensetracking.domain.model.TransactionType
 import com.example.funnyexpensetracking.ui.aianalysis.AIAnalysisFragment
+import com.example.funnyexpensetracking.ui.financialquery.FinancialQueryFragment
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.util.CurrencyUtil
 import com.github.mikephil.charting.animation.Easing
@@ -161,6 +162,10 @@ class StatisticsFragment : Fragment() {
             navigateToAiAnalysis()
         }
 
+        binding.btnFinancialQuery.setOnClickListener {
+            navigateToFinancialQuery()
+        }
+
         binding.btnPrev.setOnClickListener {
             val state = viewModel.uiState.value
             if (state.isMonthlyView) {
@@ -184,6 +189,14 @@ class StatisticsFragment : Fragment() {
         val aiAnalysisFragment = AIAnalysisFragment()
         parentFragmentManager.beginTransaction()
             .replace(R.id.fragmentContainer, aiAnalysisFragment)
+            .addToBackStack("statistics")
+            .commit()
+    }
+
+    private fun navigateToFinancialQuery() {
+        val financialQueryFragment = FinancialQueryFragment()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, financialQueryFragment)
             .addToBackStack("statistics")
             .commit()
     }

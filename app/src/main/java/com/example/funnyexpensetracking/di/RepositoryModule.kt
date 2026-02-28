@@ -62,5 +62,11 @@ abstract class RepositoryModule {
     abstract fun bindInvestmentRepository(
         impl: InvestmentRepositoryImpl
     ): InvestmentRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFinancialQueryRepository(
+        impl: FinancialQueryRepositoryImpl
+    ): FinancialQueryRepository
 }
 

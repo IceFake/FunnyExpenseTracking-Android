@@ -77,7 +77,7 @@
 - ✅ **分析结果缓存**：分析结果本地持久化保存，下次打开可直接查看上次结果
 - ✅ **历史分析记录**：支持查看历史分析记录及详情
 - ✅ **API Key 管理**：应用内设置 DeepSeek API Key，支持动态配置
-- 📅 **自然语言交互**：支持自然语言查询财务状况（规划中）
+- ✅ **自然语言交互**：支持自然语言查询财务状况，聊天式对话界面，支持多轮对话上下文关联
 
 ### 📈 统计报表
 - ✅ **月度统计**：按月查看总收入、总支出、结余及分类占比
@@ -340,6 +340,11 @@ app/src/main/java/com/example/funnyexpensetracking/
 │   │   ├── AIAnalysisContract.kt
 │   │   ├── AIAnalysisViewModel.kt
 │   │   └── AIAnalysisFragment.kt
+│   ├── financialquery/            # AI自然语言财务问答模块
+│   │   ├── FinancialQueryContract.kt
+│   │   ├── FinancialQueryViewModel.kt
+│   │   ├── FinancialQueryFragment.kt
+│   │   └── ChatMessageAdapter.kt
 │   ├── history/                   # 历史账单模块
 │   │   ├── HistoryContract.kt
 │   │   ├── HistoryViewModel.kt
