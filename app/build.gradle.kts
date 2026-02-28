@@ -101,6 +101,11 @@ dependencies {
     // MPAndroidChart
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
+    // Markwon - Markdown渲染
+    implementation("io.noties.markwon:core:4.6.2")
+    implementation("io.noties.markwon:ext-strikethrough:4.6.2")
+    implementation("io.noties.markwon:ext-tables:4.6.2")
+
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

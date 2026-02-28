@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.funnyexpensetracking.R
 import com.example.funnyexpensetracking.domain.model.ChatMessage
 import com.example.funnyexpensetracking.domain.model.ChatRole
+import com.example.funnyexpensetracking.util.MarkdownRenderer
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -67,7 +68,8 @@ class ChatMessageAdapter : ListAdapter<ChatMessage, RecyclerView.ViewHolder>(Cha
         private val tvMessage: TextView = itemView.findViewById(R.id.tvAiMessage)
         private val tvTime: TextView = itemView.findViewById(R.id.tvAiTime)
         fun bind(message: ChatMessage) {
-            tvMessage.text = message.content
+            // AI消息使用Markdown渲染
+            MarkdownRenderer.render(tvMessage, message.content)
             tvTime.text = formatTime(message.timestamp)
         }
     }

@@ -42,7 +42,9 @@
                 android:paddingVertical="10dp"
                 android:textColor="#333333"
                 android:textSize="15sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="3dp"
+                android:textIsSelectable="true"
+                android:autoLink="web" />
 
         </androidx.cardview.widget.CardView>
 

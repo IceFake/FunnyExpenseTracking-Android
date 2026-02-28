@@ -55,7 +55,7 @@ class FinancialQueryRepositoryImpl @Inject constructor(
 - 只回答与个人财务相关的问题
 - 不要编造不存在的数据
 - 如果用户问的问题超出财务范围，礼貌地引导回财务话题
-- 回复使用纯文本格式，不要使用Markdown标记
+- 回复可以使用Markdown格式来增强可读性，包括加粗、列表、标题等
 """
     }
 
