@@ -6,7 +6,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.funnyexpensetracking.ui.calendar.CalendarFragment
@@ -148,10 +151,12 @@ class MainActivity : AppCompatActivity() {
     private fun setupWorkers() {
         val workManager = WorkManager.getInstance(applicationContext)
 
-        // 每15分钟保存一次资产快照
+        // 每15分钟保存一次资产快照（纯本地计算，不需要网络）
         val assetSnapshotRequest = PeriodicWorkRequestBuilder<AssetSnapshotWorker>(
             15, TimeUnit.MINUTES
-        ).build()
+        )
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
 
         workManager.enqueueUniquePeriodicWork(
             AssetSnapshotWorker.WORK_NAME,
@@ -159,10 +164,17 @@ class MainActivity : AppCompatActivity() {
             assetSnapshotRequest
         )
 
-        // 每15分钟同步一次股票价格（股票交易时间内）
+        // 每15分钟同步一次股票价格（需要网络连接）
+        val stockSyncConstraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
         val stockSyncRequest = PeriodicWorkRequestBuilder<StockPriceSyncWorker>(
             15, TimeUnit.MINUTES
-        ).build()
+        )
+            .setConstraints(stockSyncConstraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
 
         workManager.enqueueUniquePeriodicWork(
             StockPriceSyncWorker.WORK_NAME,

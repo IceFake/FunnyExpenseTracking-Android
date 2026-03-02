@@ -57,7 +57,7 @@
 ### 💹 投资理财追踪
 - ✅ **多品类投资管理**：支持股票（STOCK）及其他投资品类的记录
 - ✅ **持仓管理**：记录持仓数量、买入价格、投入金额
-- ✅ **实时行情同步**：集成 Yahoo Finance API，后台 WorkManager 定时同步股票最新价格
+- ✅ **实时行情同步**：集成新浪财经 API，支持 A 股（上证/深证）、港股、美股实时行情，后台 WorkManager 定时同步最新价格
 - ✅ **收益计算**：自动计算持仓市值、浮动盈亏、收益率
 - ✅ **智能合并**：相同描述/代码的投资条目自动合并显示
 - ✅ **筛选功能**：支持按全部 / 股票 / 其他分类筛选
@@ -172,7 +172,7 @@ cd FunnyExpenseTracking-Android
 ### 4. 投资管理
 - **添加投资**：通过底部弹窗（AddInvestmentBottomSheet）录入投资产品
 - **设置持仓**：输入持仓数量、买入价格、投入金额
-- **实时行情**：系统通过 Yahoo Finance API 后台自动同步股票最新价格
+- **实时行情**：系统通过新浪财经 API 后台自动同步 A 股（上证/深证）、港股、美股最新价格
 - **查看收益**：实时计算持仓市值、浮动盈亏、收益率
 - **分类筛选**：按全部 / 股票 / 其他筛选投资列表
 - **编辑/删除**：修改持仓信息或删除投资条目
@@ -222,9 +222,10 @@ cd FunnyExpenseTracking-Android
 | **后台任务** | WorkManager | 2.10.0 |
 | **图表库** | MPAndroidChart | v3.1.0 |
 | **Markdown 渲染** | Markwon | 4.6.2 |
+| **安全存储** | EncryptedSharedPreferences | security-crypto 1.1.0-alpha06（API Key 加密） |
 | **导航组件** | Jetpack Navigation | 2.8.5 |
 | **AI 分析** | DeepSeek API（OpenAI 兼容格式） | deepseek-chat 模型 |
-| **股票行情** | Yahoo Finance API | 实时股价同步 |
+| **股票行情** | 新浪财经 API | A 股/港股/美股实时行情同步 |
 | **符号处理** | KSP (Kotlin Symbol Processing) | 2.0.21-1.0.28 |
 | **构建工具** | Gradle Kotlin DSL | 8.13.2 |
 
@@ -242,7 +243,7 @@ app/src/main/java/com/example/funnyexpensetracking/
 │   ├── local/                     # 本地数据源
 │   │   ├── AppDatabase.kt        # Room数据库定义
 │   │   ├── Converters.kt         # Room类型转换器
-│   │   ├── UserPreferencesManager.kt # SharedPreferences管理（API Key等）
+│   │   ├── UserPreferencesManager.kt # 偏好管理（API Key 加密存储 EncryptedSharedPreferences）
 │   │   ├── dao/                   # Room数据访问对象
 │   │   │   ├── AccountDao.kt
 │   │   │   ├── AssetBaselineDao.kt
@@ -269,14 +270,21 @@ app/src/main/java/com/example/funnyexpensetracking/
 │   │   │   ├── OpenAIApiService.kt
 │   │   │   ├── StatisticsApiService.kt
 │   │   │   ├── StockApiService.kt
-│   │   │   └── YahooFinanceApiService.kt
+│   │   │   └── YahooFinanceApiService.kt  # 新浪财经 & Yahoo Finance API
 │   │   └── dto/                   # 网络传输对象
+│   │       ├── AIAnalysisDto.kt
+│   │       ├── OpenAIDto.kt
+│   │       ├── StatisticsDto.kt
+│   │       ├── StockDto.kt
+│   │       ├── TransactionDto.kt
+│   │       └── YahooFinanceDto.kt # 新浪财经行情解析 & Yahoo 兼容DTO
 │   ├── repository/                # Repository实现
 │   │   ├── AccountRepositoryImpl.kt
 │   │   ├── AIAnalysisRepositoryImpl.kt
 │   │   ├── AssetRepositoryImpl.kt
 │   │   ├── DataManagementRepositoryImpl.kt
 │   │   ├── DeepSeekAnalysisRepositoryImpl.kt
+│   │   ├── FinancialQueryRepositoryImpl.kt  # 自然语言财务问答实现
 │   │   ├── InvestmentRepositoryImpl.kt
 │   │   ├── StatisticsRepositoryImpl.kt
 │   │   ├── StockRepositoryImpl.kt
@@ -288,20 +296,34 @@ app/src/main/java/com/example/funnyexpensetracking/
 │   │   ├── AIAnalysis.kt
 │   │   ├── AssetSummary.kt
 │   │   ├── BackupData.kt
+│   │   ├── ChatMessage.kt        # 聊天消息模型（自然语言问答）
 │   │   ├── FixedIncome.kt
 │   │   ├── Investment.kt
 │   │   ├── Statistics.kt
 │   │   ├── StockHolding.kt
 │   │   └── Transaction.kt
 │   ├── repository/                # Repository接口
+│   │   ├── AccountRepository.kt
+│   │   ├── AIAnalysisRepository.kt
+│   │   ├── AssetRepository.kt
+│   │   ├── DataManagementRepository.kt
+│   │   ├── FinancialQueryRepository.kt  # 自然语言财务问答接口
+│   │   ├── InvestmentRepository.kt
+│   │   ├── StatisticsRepository.kt
+│   │   ├── StockRepository.kt
+│   │   └── TransactionRepository.kt
 │   └── usecase/                   # 业务用例
 │       ├── RealtimeAssetCalculator.kt  # 实时资产计算器
 │       ├── ai/
 │       │   └── AIAnalysisUseCases.kt
 │       ├── asset/
+│       │   └── AssetUseCases.kt
 │       ├── statistics/
+│       │   └── StatisticsUseCases.kt
 │       ├── stock/
+│       │   └── StockUseCases.kt
 │       └── transaction/
+│           └── TransactionUseCases.kt
 ├── ui/                            # 表现层
 │   ├── common/                    # 通用组件
 │   │   └── BaseViewModel.kt      # 基础ViewModel（StateFlow + SharedFlow）
@@ -366,6 +388,7 @@ app/src/main/java/com/example/funnyexpensetracking/
     ├── Resource.kt                # 网络结果封装（Success/Error/Loading）
     ├── DateTimeUtil.kt            # 日期时间工具
     ├── CurrencyUtil.kt            # 货币格式化
+    ├── MarkdownRenderer.kt        # Markdown渲染工具（基于Markwon）
     └── NetworkMonitor.kt          # 网络状态监测
 ```
 
@@ -381,7 +404,7 @@ app/src/main/java/com/example/funnyexpensetracking/
 
 2. **DeepSeek API Key 配置**（AI 分析功能）：
    - **方式一**：在应用内「AI 分析」页面点击「API Key 设置」按钮，直接输入 API Key
-   - **方式二**：API Key 存储在 `UserPreferencesManager`（SharedPreferences）中，持久化保存
+   - **方式二**：API Key 通过 `EncryptedSharedPreferences` 加密存储（AES256-GCM），安全持久化
    - 获取 API Key：访问 [DeepSeek 开放平台](https://platform.deepseek.com/) 注册并创建
 
 3. **数据库配置**：Room 数据库配置在 `DatabaseModule.kt`
@@ -515,7 +538,7 @@ docs(readme): update installation instructions
 - [x] 日历视图与日详情弹窗查看
 - [x] 固定收支管理（多频率、累计时间计算、启用/停用、结束日期）
 - [x] 投资理财模块（多品类、持仓管理、智能合并显示）
-- [x] Yahoo Finance API 实时股票行情同步
+- [x] 新浪财经 API 实时股票行情同步（A 股/港股/美股）
 - [x] 实时资产计算（分钟级精度、多源监听、复合资产公式）
 - [x] AI 消费习惯分析（DeepSeek API，消费洞察 + 建议 + 预测）
 - [x] AI 分析结果缓存与历史记录

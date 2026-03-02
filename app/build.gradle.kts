@@ -86,6 +86,9 @@ dependencies {
     // SwipeRefreshLayout
     implementation(libs.androidx.swiperefreshlayout)
 
+    // Security - EncryptedSharedPreferences
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     // Network
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
