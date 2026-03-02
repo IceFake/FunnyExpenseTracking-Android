@@ -5,6 +5,7 @@ import com.example.funnyexpensetracking.domain.model.Suggestion
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.ui.common.UiEvent
 import com.example.funnyexpensetracking.ui.common.UiState
+import com.example.funnyexpensetracking.ui.common.ErrorState
 
 /**
  * AI分析页面状态
@@ -15,10 +16,10 @@ data class AIAnalysisUiState(
     val historyResults: List<AIAnalysisResult> = emptyList(),
     val loadingState: LoadingState = LoadingState.IDLE,
     val isAnalyzing: Boolean = false,
-    val errorMessage: String? = null,
+    override val errorMessage: String? = null,
     val showApiKeyDialog: Boolean = false,
     val currentApiKey: String = ""
-) : UiState
+) : UiState, ErrorState
 
 /**
  * AI分析页面事件

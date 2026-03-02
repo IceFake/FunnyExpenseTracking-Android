@@ -1,12 +1,12 @@
 package com.example.funnyexpensetracking.domain.usecase
 
-import com.example.funnyexpensetracking.data.local.dao.AccountDao
 import com.example.funnyexpensetracking.data.local.dao.AssetBaselineDao
-import com.example.funnyexpensetracking.data.local.dao.FixedIncomeDao
-import com.example.funnyexpensetracking.data.local.dao.InvestmentDao
+import com.example.funnyexpensetracking.domain.repository.AccountRepository
+import com.example.funnyexpensetracking.domain.repository.AssetRepository
+import com.example.funnyexpensetracking.domain.repository.InvestmentRepository
 import com.example.funnyexpensetracking.data.local.entity.AssetBaselineEntity
-import com.example.funnyexpensetracking.data.local.entity.FixedIncomeEntity
-import com.example.funnyexpensetracking.data.local.entity.FixedIncomeType
+import com.example.funnyexpensetracking.domain.model.FixedIncome
+import com.example.funnyexpensetracking.domain.model.FixedIncomeType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -48,10 +48,10 @@ data class RealtimeAssetData(
  */
 @Singleton
 class RealtimeAssetCalculator @Inject constructor(
-    private val fixedIncomeDao: FixedIncomeDao,
-    private val accountDao: AccountDao,
+    private val assetRepository: AssetRepository,
+    private val accountRepository: AccountRepository,
     private val assetBaselineDao: AssetBaselineDao,
-    private val investmentDao: InvestmentDao
+    private val investmentRepository: InvestmentRepository
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + Job())
 
@@ -88,7 +88,7 @@ class RealtimeAssetCalculator @Inject constructor(
      */
     private fun observeAccountChanges() {
         scope.launch {
-            accountDao.getTotalBalanceFlow()
+            accountRepository.getTotalBalanceFlow()
                 .distinctUntilChanged()
                 .collect {
                     recalculateAsset()
@@ -103,7 +103,7 @@ class RealtimeAssetCalculator @Inject constructor(
         scope.launch {
             // 合并固定收入和支出的累计总额变化
             combine(
-                fixedIncomeDao.getAllActiveFixedIncomes(),
+                assetRepository.getAllActiveFixedIncomes(),
                 flowOf(Unit) // 触发初始值
             ) { _, _ -> Unit }
                 .collect {
@@ -117,7 +117,7 @@ class RealtimeAssetCalculator @Inject constructor(
      */
     private fun observeInvestmentChanges() {
         scope.launch {
-            investmentDao.getTotalCurrentValueFlow()
+            investmentRepository.getTotalCurrentValueFlow()
                 .distinctUntilChanged()
                 .collect {
                     recalculateAsset()
@@ -144,7 +144,7 @@ class RealtimeAssetCalculator @Inject constructor(
      */
     private suspend fun updateFixedIncomeAccumulations() {
         val currentMinuteTimestamp = getCurrentMinuteTimestamp()
-        val fixedIncomes = fixedIncomeDao.getAllFixedIncomesList()
+        val fixedIncomes = assetRepository.getAllFixedIncomesList()
 
         var hasChanges = false
 
@@ -166,14 +166,14 @@ class RealtimeAssetCalculator @Inject constructor(
      * 更新单个固定收支的累计时间
      */
     private suspend fun updateFixedIncomeAccumulation(
-        entity: FixedIncomeEntity,
+        fixedIncome: FixedIncome,
         currentTime: Long
     ) {
-        val lastTime = entity.lastRecordTime
+        val lastTime = fixedIncome.lastRecordTime
 
         // 如果上次记录时间为0（新条目），初始化为开始时间或当前时间
         val effectiveLastTime = if (lastTime == 0L) {
-            maxOf(entity.startDate, currentTime - 60_000) // 最多回溯1分钟
+            maxOf(fixedIncome.startDate, currentTime - 60_000) // 最多回溯1分钟
         } else {
             lastTime
         }
@@ -183,10 +183,10 @@ class RealtimeAssetCalculator @Inject constructor(
 
         // 如果时间差为负或0，只更新记录时间
         if (deltaMinutes <= 0) {
-            fixedIncomeDao.updateAccumulated(
-                id = entity.id,
-                accumulatedMinutes = entity.accumulatedMinutes,
-                accumulatedAmount = entity.accumulatedAmount,
+            assetRepository.updateFixedIncomeAccumulation(
+                id = fixedIncome.id,
+                accumulatedMinutes = fixedIncome.accumulatedMinutes,
+                accumulatedAmount = fixedIncome.accumulatedAmount,
                 lastRecordTime = currentTime
             )
             return
@@ -194,23 +194,23 @@ class RealtimeAssetCalculator @Inject constructor(
 
         // 计算在生效期间内的有效分钟数
         val effectiveMinutes = calculateEffectiveMinutes(
-            entity = entity,
+            fixedIncome = fixedIncome,
             fromTime = effectiveLastTime,
             toTime = currentTime
         )
 
         // 更新累计时间
-        val newAccumulatedMinutes = entity.accumulatedMinutes + effectiveMinutes
+        val newAccumulatedMinutes = fixedIncome.accumulatedMinutes + effectiveMinutes
 
         // 根据累计时间计算累计金额（优先按周期计算以减小误差）
-        val newAccumulatedAmount = entity.frequency.calculateAccumulatedAmount(
-            entity.amount,
+        val newAccumulatedAmount = fixedIncome.frequency.calculateAccumulatedAmount(
+            fixedIncome.amount,
             newAccumulatedMinutes
         )
 
         // 更新数据库
-        fixedIncomeDao.updateAccumulated(
-            id = entity.id,
+        assetRepository.updateFixedIncomeAccumulation(
+            id = fixedIncome.id,
             accumulatedMinutes = newAccumulatedMinutes,
             accumulatedAmount = newAccumulatedAmount,
             lastRecordTime = currentTime
@@ -221,17 +221,17 @@ class RealtimeAssetCalculator @Inject constructor(
      * 计算在生效期间内的有效分钟数
      */
     private fun calculateEffectiveMinutes(
-        entity: FixedIncomeEntity,
+        fixedIncome: FixedIncome,
         fromTime: Long,
         toTime: Long
     ): Long {
         // 如果条目未激活，返回0
-        if (!entity.isActive) return 0
+        if (!fixedIncome.isActive) return 0
 
         // 计算有效的时间范围
-        val effectiveStart = maxOf(fromTime, entity.startDate)
-        val effectiveEnd = if (entity.endDate != null) {
-            minOf(toTime, entity.endDate)
+        val effectiveStart = maxOf(fromTime, fixedIncome.startDate)
+        val effectiveEnd = if (fixedIncome.endDate != null) {
+            minOf(toTime, fixedIncome.endDate)
         } else {
             toTime
         }
@@ -253,21 +253,21 @@ class RealtimeAssetCalculator @Inject constructor(
         val currentMinuteTimestamp = getCurrentMinuteTimestamp()
 
         // 1. 获取各账户余额总和
-        val totalAccountBalance = accountDao.getTotalBalance() ?: 0.0
+        val totalAccountBalance = accountRepository.getTotalBalance()
 
         // 2. 获取固定收支累计总额
-        val totalFixedIncome = fixedIncomeDao.getTotalAccumulatedIncome()
-        val totalFixedExpense = fixedIncomeDao.getTotalAccumulatedExpense()
+        val totalFixedIncome = assetRepository.getTotalAccumulatedIncome()
+        val totalFixedExpense = assetRepository.getTotalAccumulatedExpense()
         val fixedIncomeNetAmount = totalFixedIncome - totalFixedExpense
 
         // 3. 获取投资/理财当前价值
-        val totalInvestmentValue = investmentDao.getTotalCurrentValue()
+        val totalInvestmentValue = investmentRepository.getTotalCurrentValue()
 
         // 计算总资产 = 账户余额总和 + 固定收支净额 + 投资价值
         val currentAsset = totalAccountBalance + fixedIncomeNetAmount + totalInvestmentValue
 
         // 计算每分钟净变动（用于显示）
-        val fixedIncomes = fixedIncomeDao.getAllFixedIncomesList()
+        val fixedIncomes = assetRepository.getAllFixedIncomesList()
         var incomePerMinute = 0.0
         var expensePerMinute = 0.0
 

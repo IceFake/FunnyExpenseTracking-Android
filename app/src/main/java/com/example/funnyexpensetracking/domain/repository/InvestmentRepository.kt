@@ -58,5 +58,15 @@ interface InvestmentRepository {
      * 获取股票总投入
      */
     suspend fun getTotalStockInvestment(): Double
+
+    /**
+     * 获取总投资当前价值（包含股票和其他投资）
+     */
+    suspend fun getTotalCurrentValue(): Double
+
+    /**
+     * 获取总投资当前价值Flow（用于实时监听变化）
+     */
+    fun getTotalCurrentValueFlow(): Flow<Double>
 }
 

@@ -58,6 +58,27 @@ class AssetRepositoryImpl @Inject constructor(
         fixedIncomeDao.updateActiveStatus(id, isActive)
     }
 
+    override suspend fun getTotalAccumulatedIncome(): Double {
+        return fixedIncomeDao.getTotalAccumulatedIncome()
+    }
+
+    override suspend fun getTotalAccumulatedExpense(): Double {
+        return fixedIncomeDao.getTotalAccumulatedExpense()
+    }
+
+    override suspend fun getAllFixedIncomesList(): List<FixedIncome> {
+        return fixedIncomeDao.getAllFixedIncomesList().map { it.toDomainModel() }
+    }
+
+    override suspend fun updateFixedIncomeAccumulation(
+        id: Long,
+        accumulatedMinutes: Long,
+        accumulatedAmount: Double,
+        lastRecordTime: Long
+    ) {
+        fixedIncomeDao.updateAccumulated(id, accumulatedMinutes, accumulatedAmount, lastRecordTime)
+    }
+
     override suspend fun saveAssetSnapshot(snapshot: AssetSnapshot): Long {
         return assetSnapshotDao.insert(snapshot.toEntity())
     }
@@ -161,7 +182,10 @@ class AssetRepositoryImpl @Inject constructor(
             frequency = frequency.toDomainFrequency(),
             startDate = startDate,
             endDate = endDate,
-            isActive = isActive
+            isActive = isActive,
+            accumulatedMinutes = accumulatedMinutes,
+            accumulatedAmount = accumulatedAmount,
+            lastRecordTime = lastRecordTime
         )
     }
 
@@ -174,7 +198,10 @@ class AssetRepositoryImpl @Inject constructor(
             frequency = frequency.toEntityFrequency(),
             startDate = startDate,
             endDate = endDate,
-            isActive = isActive
+            isActive = isActive,
+            accumulatedMinutes = accumulatedMinutes,
+            accumulatedAmount = accumulatedAmount,
+            lastRecordTime = lastRecordTime
         )
     }
 

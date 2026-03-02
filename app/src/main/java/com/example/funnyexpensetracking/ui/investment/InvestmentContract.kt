@@ -4,6 +4,7 @@ import com.example.funnyexpensetracking.domain.model.Investment
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.ui.common.UiEvent
 import com.example.funnyexpensetracking.ui.common.UiState
+import com.example.funnyexpensetracking.ui.common.ErrorState
 
 /**
  * 投资筛选类型
@@ -37,8 +38,10 @@ data class InvestmentUiState(
     // 当前编辑的投资条目
     val editingInvestment: Investment? = null,
     // 是否正在刷新股票价格
-    val isRefreshing: Boolean = false
-) : UiState
+    val isRefreshing: Boolean = false,
+    // 错误信息
+    override val errorMessage: String? = null
+) : UiState, ErrorState
 
 /**
  * 投资页面事件

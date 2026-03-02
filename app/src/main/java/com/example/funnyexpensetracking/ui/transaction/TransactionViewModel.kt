@@ -2,16 +2,6 @@ package com.example.funnyexpensetracking.ui.transaction
 
 import androidx.lifecycle.viewModelScope
 import com.example.funnyexpensetracking.data.local.UserPreferencesManager
-import com.example.funnyexpensetracking.data.local.dao.AccountDao
-import com.example.funnyexpensetracking.data.local.dao.FixedIncomeDao
-import com.example.funnyexpensetracking.data.local.dao.TransactionDao
-import com.example.funnyexpensetracking.data.local.entity.AccountEntity
-import com.example.funnyexpensetracking.data.local.entity.FixedIncomeEntity
-import com.example.funnyexpensetracking.data.local.entity.SyncStatus
-import com.example.funnyexpensetracking.data.local.entity.TransactionEntity
-import com.example.funnyexpensetracking.data.local.entity.TransactionType as EntityTransactionType
-import com.example.funnyexpensetracking.data.local.entity.FixedIncomeType as EntityFixedIncomeType
-import com.example.funnyexpensetracking.data.local.entity.FixedIncomeFrequency as EntityFixedIncomeFrequency
 import com.example.funnyexpensetracking.data.sync.SyncManager
 import com.example.funnyexpensetracking.data.sync.SyncState
 import com.example.funnyexpensetracking.domain.model.Account
@@ -21,6 +11,7 @@ import com.example.funnyexpensetracking.domain.model.FixedIncomeType
 import com.example.funnyexpensetracking.domain.model.Transaction
 import com.example.funnyexpensetracking.domain.model.TransactionType
 import com.example.funnyexpensetracking.domain.usecase.RealtimeAssetCalculator
+import com.example.funnyexpensetracking.domain.usecase.transaction.TransactionUseCases
 import com.example.funnyexpensetracking.ui.common.BaseViewModel
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.util.DateTimeUtil
@@ -39,17 +30,14 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class TransactionViewModel @Inject constructor(
-    private val transactionDao: TransactionDao,
-    private val accountDao: AccountDao,
-    private val fixedIncomeDao: FixedIncomeDao,
+    private val transactionUseCases: TransactionUseCases,
     private val syncManager: SyncManager,
     private val networkMonitor: NetworkMonitor,
     private val realtimeAssetCalculator: RealtimeAssetCalculator,
     private val userPreferencesManager: UserPreferencesManager
 ) : BaseViewModel<TransactionUiState, TransactionUiEvent>() {
 
-    private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
-    private val dayOfWeekFormat = SimpleDateFormat("EEEE", Locale.CHINA)
+
 
     override fun initialState() = TransactionUiState()
 
@@ -138,19 +126,7 @@ class TransactionViewModel @Inject constructor(
      */
     private fun initDefaultAccounts() {
         viewModelScope.launch {
-            val accounts = accountDao.getAllAccounts()
-            accounts.collect { list ->
-                if (list.isEmpty()) {
-                    // 创建默认账户
-                    val defaultAccounts = listOf(
-                        AccountEntity(name = "现金", icon = "cash", balance = 0.0, isDefault = true, sortOrder = 0),
-                        AccountEntity(name = "微信", icon = "wechat", balance = 0.0, isDefault = false, sortOrder = 1),
-                        AccountEntity(name = "支付宝", icon = "alipay", balance = 0.0, isDefault = false, sortOrder = 2),
-                        AccountEntity(name = "银行卡", icon = "bank", balance = 0.0, isDefault = false, sortOrder = 3)
-                    )
-                    defaultAccounts.forEach { accountDao.insert(it) }
-                }
-            }
+            transactionUseCases.initializeDefaultAccountsIfEmpty()
         }
     }
 
@@ -164,76 +140,23 @@ class TransactionViewModel @Inject constructor(
         val todayStart = DateTimeUtil.getTodayStartTimestamp()
         val todayEnd = DateTimeUtil.getTodayEndTimestamp()
 
-        // 组合账户和交易数据（只获取今日数据用于首页显示）
-        combine(
-            transactionDao.getTransactionsByDateRange(todayStart, todayEnd),
-            accountDao.getAllAccounts()
-        ) { transactions, accounts ->
-            Pair(transactions, accounts)
-        }.onEach { (transactionEntities, accountEntities) ->
-            val accountMap = accountEntities.associateBy { it.id }
-            val accountList = accountEntities.map { it.toDomainModel() }
-
-            // 转换为领域模型
-            val transactions = transactionEntities.map { entity ->
-                entity.toDomainModel(accountMap[entity.accountId]?.name ?: "未知账户")
-            }
-
-            // 按日期分组（首页只显示今日）
-            val dailyTransactions = groupTransactionsByDate(transactions)
-
-            // 计算今日收支
-            val todayIncome = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-            val todayExpense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-
-            // 计算总余额
-            val totalBalance = accountEntities.sumOf { it.balance }
-
-            updateState {
-                copy(
-                    transactions = transactions,
-                    dailyTransactions = dailyTransactions,
-                    accounts = accountList,
-                    todayIncome = todayIncome,
-                    todayExpense = todayExpense,
-                    totalBalance = totalBalance,
-                    loadingState = LoadingState.SUCCESS
-                )
-            }
-        }.launchIn(viewModelScope)
+        transactionUseCases.loadTransactionsByDateRange(todayStart, todayEnd)
+            .onEach { result ->
+                updateState {
+                    copy(
+                        transactions = result.transactions,
+                        dailyTransactions = result.dailyTransactions,
+                        accounts = result.accounts,
+                        todayIncome = result.todayIncome,
+                        todayExpense = result.todayExpense,
+                        totalBalance = result.totalBalance,
+                        loadingState = LoadingState.SUCCESS
+                    )
+                }
+            }.launchIn(viewModelScope)
     }
 
-    /**
-     * 按日期分组交易记录
-     */
-    private fun groupTransactionsByDate(transactions: List<Transaction>): List<DailyTransactions> {
-        return transactions
-            .groupBy { getDateOnly(it.date) }
-            .map { (dateTimestamp, transactionList) ->
-                DailyTransactions(
-                    date = dateTimestamp,
-                    dateString = dateFormat.format(Date(dateTimestamp)),
-                    dayOfWeek = dayOfWeekFormat.format(Date(dateTimestamp)),
-                    totalIncome = transactionList.filter { it.type == TransactionType.INCOME }.sumOf { it.amount },
-                    totalExpense = transactionList.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount },
-                    transactions = transactionList.sortedByDescending { it.createdAt }
-                )
-            }
-            .sortedByDescending { it.date }
-    }
 
-    /**
-     * 获取日期的0点时间戳
-     */
-    private fun getDateOnly(timestamp: Long): Long {
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = timestamp
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        return calendar.timeInMillis
-    }
 
     /**
      * 显示添加交易对话框
@@ -292,24 +215,14 @@ class TransactionViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val entity = TransactionEntity(
+                transactionUseCases.addTransaction(
                     amount = amount,
-                    type = type.toEntityType(),
+                    type = type,
                     category = category,
                     accountId = accountId,
                     note = note,
-                    date = date,
-                    syncStatus = SyncStatus.PENDING_UPLOAD,
-                    updatedAt = System.currentTimeMillis()
+                    date = date
                 )
-                transactionDao.insert(entity)
-
-                // 更新账户余额
-                val balanceChange = if (type == TransactionType.INCOME) amount else -amount
-                accountDao.updateBalance(accountId, balanceChange)
-
-                // 通知资产计算器普通收支发生变化
-                realtimeAssetCalculator.onTransactionChanged()
 
                 hideAddDialog()
                 sendEvent(TransactionUiEvent.TransactionAdded)
@@ -340,31 +253,14 @@ class TransactionViewModel @Inject constructor(
     fun deleteTransaction(transaction: Transaction) {
         viewModelScope.launch {
             try {
-                val entity = transactionDao.getById(transaction.id)
+                transactionUseCases.deleteTransaction(transaction)
 
-                if (entity != null) {
-                    if (entity.serverId != null) {
-                        // 有服务器ID，标记为待删除（软删除）
-                        transactionDao.markAsDeleted(transaction.id)
-                    } else {
-                        // 没有服务器ID，直接删除本地记录
-                        transactionDao.delete(entity)
-                    }
+                sendEvent(TransactionUiEvent.TransactionDeleted)
+                sendEvent(TransactionUiEvent.ShowMessage("删除成功"))
 
-                    // 回滚账户余额
-                    val balanceChange = if (transaction.type == TransactionType.INCOME) -transaction.amount else transaction.amount
-                    accountDao.updateBalance(transaction.accountId, balanceChange)
-
-                    // 通知资产计算器普通收支发生变化
-                    realtimeAssetCalculator.onTransactionChanged()
-
-                    sendEvent(TransactionUiEvent.TransactionDeleted)
-                    sendEvent(TransactionUiEvent.ShowMessage("删除成功"))
-
-                    // 尝试同步
-                    if (networkMonitor.isNetworkAvailable()) {
-                        syncManager.syncAll()
-                    }
+                // 尝试同步
+                if (networkMonitor.isNetworkAvailable()) {
+                    syncManager.syncAll()
                 }
             } catch (e: Exception) {
                 sendEvent(TransactionUiEvent.ShowMessage("删除失败: ${e.message}"))
@@ -394,38 +290,15 @@ class TransactionViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val existingEntity = transactionDao.getById(id)
-                if (existingEntity == null) {
-                    sendEvent(TransactionUiEvent.ShowMessage("交易记录不存在"))
-                    return@launch
-                }
-
-                // 回滚旧账户余额
-                val oldBalanceChange = if (existingEntity.type == EntityTransactionType.INCOME) -existingEntity.amount else existingEntity.amount
-                accountDao.updateBalance(existingEntity.accountId, oldBalanceChange)
-
-                // 更新交易记录
-                val entity = TransactionEntity(
+                transactionUseCases.updateTransaction(
                     id = id,
-                    serverId = existingEntity.serverId,
                     amount = amount,
-                    type = type.toEntityType(),
+                    type = type,
                     category = category,
                     accountId = accountId,
                     note = note,
-                    date = date,
-                    createdAt = existingEntity.createdAt,
-                    updatedAt = System.currentTimeMillis(),
-                    syncStatus = SyncStatus.PENDING_UPLOAD
+                    date = date
                 )
-                transactionDao.update(entity)
-
-                // 更新新账户余额
-                val newBalanceChange = if (type == TransactionType.INCOME) amount else -amount
-                accountDao.updateBalance(accountId, newBalanceChange)
-
-                // 通知资产计算器普通收支发生变化
-                realtimeAssetCalculator.onTransactionChanged()
 
                 hideAddDialog()
                 sendEvent(TransactionUiEvent.TransactionUpdated)
@@ -447,12 +320,11 @@ class TransactionViewModel @Inject constructor(
     fun addAccount(name: String, initialBalance: Double = 0.0) {
         viewModelScope.launch {
             try {
-                val entity = AccountEntity(
+                transactionUseCases.addAccount(
                     name = name,
-                    balance = initialBalance,
+                    initialBalance = initialBalance,
                     sortOrder = currentState().accounts.size
                 )
-                accountDao.insert(entity)
                 hideAddAccountDialog()
                 sendEvent(TransactionUiEvent.AccountAdded)
                 sendEvent(TransactionUiEvent.ShowMessage("账户添加成功"))
@@ -468,19 +340,7 @@ class TransactionViewModel @Inject constructor(
     fun deleteAccount(account: Account) {
         viewModelScope.launch {
             try {
-                val entity = AccountEntity(
-                    id = account.id,
-                    name = account.name,
-                    icon = account.icon,
-                    balance = account.balance,
-                    isDefault = account.isDefault,
-                    sortOrder = account.sortOrder
-                )
-                accountDao.delete(entity)
-
-                // 重新计算资产
-                realtimeAssetCalculator.recalculateAsset()
-
+                transactionUseCases.deleteAccount(account)
                 sendEvent(TransactionUiEvent.ShowMessage("账户删除成功"))
             } catch (e: Exception) {
                 sendEvent(TransactionUiEvent.ShowMessage("删除账户失败: ${e.message}"))
@@ -494,21 +354,9 @@ class TransactionViewModel @Inject constructor(
     fun updateAccount(accountId: Long, name: String, balance: Double) {
         viewModelScope.launch {
             try {
-                val existingAccount = accountDao.getById(accountId)
-                if (existingAccount != null) {
-                    val updatedEntity = existingAccount.copy(
-                        name = name,
-                        balance = balance,
-                        updatedAt = System.currentTimeMillis()
-                    )
-                    accountDao.update(updatedEntity)
-
-                    // 重新计算资产
-                    realtimeAssetCalculator.recalculateAsset()
-
-                    sendEvent(TransactionUiEvent.AccountUpdated)
-                    sendEvent(TransactionUiEvent.ShowMessage("账户更新成功"))
-                }
+                transactionUseCases.updateAccount(accountId, name, balance)
+                sendEvent(TransactionUiEvent.AccountUpdated)
+                sendEvent(TransactionUiEvent.ShowMessage("账户更新成功"))
             } catch (e: Exception) {
                 sendEvent(TransactionUiEvent.ShowMessage("更新账户失败: ${e.message}"))
             }
@@ -521,11 +369,7 @@ class TransactionViewModel @Inject constructor(
     fun setAccountBalance(accountId: Long, balance: Double) {
         viewModelScope.launch {
             try {
-                accountDao.setBalance(accountId, balance)
-
-                // 重新计算资产
-                realtimeAssetCalculator.recalculateAsset()
-
+                transactionUseCases.setAccountBalance(accountId, balance)
                 sendEvent(TransactionUiEvent.ShowMessage("余额已更新"))
             } catch (e: Exception) {
                 sendEvent(TransactionUiEvent.ShowMessage("更新余额失败: ${e.message}"))
@@ -547,22 +391,14 @@ class TransactionViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val entity = FixedIncomeEntity(
+                transactionUseCases.addFixedIncome(
                     name = name,
                     amount = amount,
-                    type = type.toEntityType(),
-                    frequency = frequency.toEntityFrequency(),
+                    type = type,
+                    frequency = frequency,
                     startDate = startDate,
-                    endDate = endDate,
-                    isActive = true,
-                    accumulatedMinutes = 0,
-                    accumulatedAmount = 0.0,
-                    lastRecordTime = startDate  // 初始化为开始时间，而不是当前时间
+                    endDate = endDate
                 )
-                fixedIncomeDao.insert(entity)
-
-                // 重新计算资产（固定收支变化会影响每分钟变动率）
-                realtimeAssetCalculator.recalculateAsset()
 
                 hideAddFixedIncomeDialog()
                 sendEvent(TransactionUiEvent.FixedIncomeAdded)
@@ -575,61 +411,6 @@ class TransactionViewModel @Inject constructor(
         }
     }
 
-    // ========== 类型转换扩展函数 ==========
 
-    private fun TransactionEntity.toDomainModel(accountName: String): Transaction {
-        return Transaction(
-            id = id,
-            amount = amount,
-            type = type.toDomainType(),
-            category = category,
-            accountId = accountId,
-            accountName = accountName,
-            note = note,
-            date = date,
-            createdAt = createdAt
-        )
-    }
-
-    private fun AccountEntity.toDomainModel(): Account {
-        return Account(
-            id = id,
-            name = name,
-            icon = icon,
-            balance = balance,
-            isDefault = isDefault,
-            sortOrder = sortOrder
-        )
-    }
-
-    private fun TransactionType.toEntityType(): EntityTransactionType {
-        return when (this) {
-            TransactionType.INCOME -> EntityTransactionType.INCOME
-            TransactionType.EXPENSE -> EntityTransactionType.EXPENSE
-        }
-    }
-
-    private fun EntityTransactionType.toDomainType(): TransactionType {
-        return when (this) {
-            EntityTransactionType.INCOME -> TransactionType.INCOME
-            EntityTransactionType.EXPENSE -> TransactionType.EXPENSE
-        }
-    }
-
-    private fun FixedIncomeType.toEntityType(): EntityFixedIncomeType {
-        return when (this) {
-            FixedIncomeType.INCOME -> EntityFixedIncomeType.INCOME
-            FixedIncomeType.EXPENSE -> EntityFixedIncomeType.EXPENSE
-        }
-    }
-
-    private fun FixedIncomeFrequency.toEntityFrequency(): EntityFixedIncomeFrequency {
-        return when (this) {
-            FixedIncomeFrequency.DAILY -> EntityFixedIncomeFrequency.DAILY
-            FixedIncomeFrequency.WEEKLY -> EntityFixedIncomeFrequency.WEEKLY
-            FixedIncomeFrequency.MONTHLY -> EntityFixedIncomeFrequency.MONTHLY
-            FixedIncomeFrequency.YEARLY -> EntityFixedIncomeFrequency.YEARLY
-        }
-    }
 }
 

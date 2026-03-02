@@ -48,6 +48,31 @@ interface AssetRepository {
      */
     suspend fun updateFixedIncomeStatus(id: Long, isActive: Boolean)
 
+    /**
+     * 获取累计固定收入总额
+     */
+    suspend fun getTotalAccumulatedIncome(): Double
+
+    /**
+     * 获取累计固定支出总额
+     */
+    suspend fun getTotalAccumulatedExpense(): Double
+
+    /**
+     * 获取所有固定收支列表（用于每分钟更新累计）
+     */
+    suspend fun getAllFixedIncomesList(): List<FixedIncome>
+
+    /**
+     * 更新固定收支累计时间和金额
+     */
+    suspend fun updateFixedIncomeAccumulation(
+        id: Long,
+        accumulatedMinutes: Long,
+        accumulatedAmount: Double,
+        lastRecordTime: Long
+    )
+
     // ========== 资产快照管理 ==========
 
     /**

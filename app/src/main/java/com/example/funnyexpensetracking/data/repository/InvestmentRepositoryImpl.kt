@@ -187,6 +187,20 @@ class InvestmentRepositoryImpl @Inject constructor(
         return total
     }
 
+    override suspend fun getTotalCurrentValue(): Double {
+        var total = 0.0
+        investmentDao.getAllInvestments().collect { entities ->
+            total = entities.sumOf { entity ->
+                if (entity.currentValue > 0) entity.currentValue else entity.investment
+            }
+        }
+        return total
+    }
+
+    override fun getTotalCurrentValueFlow(): Flow<Double> {
+        return investmentDao.getTotalCurrentValueFlow()
+    }
+
     private fun InvestmentEntity.toDomainModel(): Investment {
         return Investment(
             id = id,

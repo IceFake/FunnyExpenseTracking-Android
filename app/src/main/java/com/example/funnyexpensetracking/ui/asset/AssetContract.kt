@@ -6,6 +6,7 @@ import com.example.funnyexpensetracking.domain.model.StockHolding
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.ui.common.UiEvent
 import com.example.funnyexpensetracking.ui.common.UiState
+import com.example.funnyexpensetracking.ui.common.ErrorState
 
 /**
  * 资产页面状态
@@ -16,11 +17,11 @@ data class AssetUiState(
     val stockHoldings: List<StockHolding> = emptyList(),
     val loadingState: LoadingState = LoadingState.IDLE,
     val isRefreshing: Boolean = false,
-    val errorMessage: String? = null,
+    override val errorMessage: String? = null,
     // 实时资产显示（每分钟更新）
     val realtimeTotalAsset: Double = 0.0,
     val lastUpdateTime: Long = 0
-) : UiState
+) : UiState, ErrorState
 
 /**
  * 资产页面事件

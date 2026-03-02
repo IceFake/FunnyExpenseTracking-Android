@@ -4,6 +4,7 @@ import com.example.funnyexpensetracking.domain.model.FixedIncome
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.ui.common.UiEvent
 import com.example.funnyexpensetracking.ui.common.UiState
+import com.example.funnyexpensetracking.ui.common.ErrorState
 
 /**
  * 固定收支筛选类型
@@ -32,9 +33,11 @@ data class FixedIncomeUiState(
     val netPerMinute: Double = 0.0,
     // 加载状态
     val loadingState: LoadingState = LoadingState.IDLE,
+    // 错误信息
+    override val errorMessage: String? = null,
     // 是否显示添加弹窗
     val showAddDialog: Boolean = false
-) : UiState
+) : UiState, ErrorState
 
 /**
  * 固定收支页面事件

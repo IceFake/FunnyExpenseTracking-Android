@@ -3,6 +3,7 @@ package com.example.funnyexpensetracking.ui.calendar
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.ui.common.UiEvent
 import com.example.funnyexpensetracking.ui.common.UiState
+import com.example.funnyexpensetracking.ui.common.ErrorState
 
 /**
  * 日历页面状态
@@ -21,8 +22,10 @@ data class CalendarUiState(
     // 本月结余
     val monthBalance: Double = 0.0,
     // 加载状态
-    val loadingState: LoadingState = LoadingState.IDLE
-) : UiState
+    val loadingState: LoadingState = LoadingState.IDLE,
+    // 错误信息
+    override val errorMessage: String? = null
+) : UiState, ErrorState
 
 /**
  * 日历页面事件

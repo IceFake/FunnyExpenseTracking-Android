@@ -54,6 +54,11 @@ interface AccountRepository {
     suspend fun getTotalBalance(): Double
 
     /**
+     * 获取总余额Flow（用于实时监听变化）
+     */
+    fun getTotalBalanceFlow(): Flow<Double>
+
+    /**
      * 与服务器同步
      */
     suspend fun syncWithServer()

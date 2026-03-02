@@ -3,6 +3,7 @@ package com.example.funnyexpensetracking.ui.financialquery
 import com.example.funnyexpensetracking.domain.model.ChatMessage
 import com.example.funnyexpensetracking.ui.common.UiEvent
 import com.example.funnyexpensetracking.ui.common.UiState
+import com.example.funnyexpensetracking.ui.common.ErrorState
 
 /**
  * 自然语言财务查询页面状态
@@ -10,7 +11,7 @@ import com.example.funnyexpensetracking.ui.common.UiState
 data class FinancialQueryUiState(
     val messages: List<ChatMessage> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    override val errorMessage: String? = null,
     val showApiKeyDialog: Boolean = false,
     val currentApiKey: String = "",
     val suggestedQuestions: List<String> = listOf(
@@ -21,7 +22,7 @@ data class FinancialQueryUiState(
         "给我一些省钱建议",
         "我的投资情况怎么样？"
     )
-) : UiState
+) : UiState, ErrorState
 
 /**
  * 自然语言财务查询页面事件

@@ -5,6 +5,7 @@ import com.example.funnyexpensetracking.domain.model.Transaction
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.ui.common.UiEvent
 import com.example.funnyexpensetracking.ui.common.UiState
+import com.example.funnyexpensetracking.ui.common.ErrorState
 
 /**
  * 历史账单页面状态
@@ -21,8 +22,10 @@ data class HistoryUiState(
     // 当天结余
     val dayBalance: Double = 0.0,
     // 加载状态
-    val loadingState: LoadingState = LoadingState.IDLE
-) : UiState
+    val loadingState: LoadingState = LoadingState.IDLE,
+    // 错误信息
+    override val errorMessage: String? = null
+) : UiState, ErrorState
 
 /**
  * 历史账单页面事件

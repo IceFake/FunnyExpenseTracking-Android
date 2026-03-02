@@ -86,6 +86,10 @@ class AccountRepositoryImpl @Inject constructor(
         return accountDao.getTotalBalance() ?: 0.0
     }
 
+    override fun getTotalBalanceFlow(): Flow<Double> {
+        return accountDao.getTotalBalanceFlow().map { it ?: 0.0 }
+    }
+
     override suspend fun syncWithServer() {
         syncManager.syncAccounts()
     }

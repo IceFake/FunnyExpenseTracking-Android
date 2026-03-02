@@ -7,6 +7,7 @@ import com.example.funnyexpensetracking.domain.model.TransactionType
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.ui.common.UiEvent
 import com.example.funnyexpensetracking.ui.common.UiState
+import com.example.funnyexpensetracking.ui.common.ErrorState
 
 /**
  * 收入分类
@@ -33,7 +34,7 @@ data class TransactionUiState(
     // 加载状态
     val loadingState: LoadingState = LoadingState.IDLE,
     // 错误信息
-    val errorMessage: String? = null,
+    override val errorMessage: String? = null,
     // 今日收入
     val todayIncome: Double = 0.0,
     // 今日支出
@@ -64,7 +65,7 @@ data class TransactionUiState(
     val expensePerMinute: Double = 0.0,
     // 每分钟净变动
     val netChangePerMinute: Double = 0.0
-) : UiState
+) : UiState, ErrorState
 
 /**
  * 添加交易表单状态

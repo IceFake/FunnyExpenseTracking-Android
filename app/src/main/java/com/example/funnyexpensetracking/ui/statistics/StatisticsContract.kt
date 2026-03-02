@@ -6,6 +6,7 @@ import com.example.funnyexpensetracking.domain.model.TrendStatistics
 import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.ui.common.UiEvent
 import com.example.funnyexpensetracking.ui.common.UiState
+import com.example.funnyexpensetracking.ui.common.ErrorState
 
 /**
  * 统计页面状态
@@ -19,8 +20,8 @@ data class StatisticsUiState(
     val isMonthlyView: Boolean = true,  // true: 月视图, false: 年视图
     val loadingState: LoadingState = LoadingState.IDLE,
     val chartUrl: String? = null,
-    val errorMessage: String? = null
-) : UiState
+    override val errorMessage: String? = null
+) : UiState, ErrorState
 
 /**
  * 统计页面事件
