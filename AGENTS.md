@@ -139,6 +139,7 @@ Essential information for AI agents working on this Android codebase.
 ## CI/CD
 - GitHub Actions workflow `.github/workflows/release.yml` builds and releases APK on tag push.
 - Uses `./gradlew assembleRelease`.
+- CI uses JDK 17 while project targets JDK 11.
 - No automated testing in CI yet.
 
 ## Notes for AI Agents
@@ -154,5 +155,5 @@ Essential information for AI agents working on this Android codebase.
 
 ---
 
-*Last updated: 2026‑02‑27*  
+*Last updated: 2026‑03‑02*  
 *Based on analysis of the codebase.*
