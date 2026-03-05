@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material Design 3 Color Palette - Warm Theme -->
+    <!-- Primary Colors -->
+    <color name="compose_primary">#FF7043</color>
+    <color name="compose_on_primary">#FFFFFF</color>
+    <color name="compose_primary_container">#FFCCBC</color>
+    <color name="compose_on_primary_container">#BF360C</color>
+    
+    <!-- Secondary Colors -->
+    <color name="compose_secondary">#FFB74D</color>
+    <color name="compose_on_secondary">#3E2723</color>
+    <color name="compose_secondary_container">#FFECB3</color>
+    <color name="compose_on_secondary_container">#5D4037</color>
+    
+    <!-- Tertiary Colors -->
+    <color name="compose_tertiary">#FF8A80</color>
+    <color name="compose_on_tertiary">#FFFFFF</color>
+    <color name="compose_tertiary_container">#FFCDD2</color>
+    <color name="compose_on_tertiary_container">#B71C1C</color>
+    
+    <!-- Error Colors -->
+    <color name="compose_error">#B3261E</color>
+    <color name="compose_on_error">#FFFFFF</color>
+    <color name="compose_error_container">#F9DEDC</color>
+    <color name="compose_on_error_container">#410E0B</color>
+    
+    <!-- Background Colors - Warm off-white -->
+    <color name="compose_background">#FFF8E1</color>
+    <color name="compose_on_background">#3E2723</color>
+    <color name="compose_surface">#FFF8E1</color>
+    <color name="compose_on_surface">#3E2723</color>
+    
+    <!-- Surface Variant -->
+    <color name="compose_surface_variant">#FFECB3</color>
+    <color name="compose_on_surface_variant">#5D4037</color>
+    
+    <!-- Outline -->
+    <color name="compose_outline">#8D6E63</color>
+    <color name="compose_outline_variant">#D7CCC8</color>
+    
+    <!-- Chart Colors - Expense Categories (10 colors) - Warm tones -->
+    <color name="compose_chart_expense_1">#FF7043</color> <!-- 深橙 -->
+    <color name="compose_chart_expense_2">#FF5722</color> <!-- 橙红 -->
+    <color name="compose_chart_expense_3">#E64A19</color> <!-- 深橙红 -->
+    <color name="compose_chart_expense_4">#FF8A65</color> <!-- 浅橙 -->
+    <color name="compose_chart_expense_5">#FFAB91</color> <!-- 浅珊瑚 -->
+    <color name="compose_chart_expense_6">#FFCCBC</color> <!-- 浅橙 -->
+    <color name="compose_chart_expense_7">#D7CCC8</color> <!-- 浅棕 -->
+    <color name="compose_chart_expense_8">#A1887F</color> <!-- 棕色 -->
+    <color name="compose_chart_expense_9">#8D6E63</color> <!-- 中棕 -->
+    <color name="compose_chart_expense_10">#795548</color> <!-- 棕色 -->
+    
+    <!-- Chart Colors - Income Categories (10 colors) - Warm tones -->
+    <color name="compose_chart_income_1">#66BB6A</color> <!-- 绿色 -->
+    <color name="compose_chart_income_2">#81C784</color> <!-- 浅绿 -->
+    <color name="compose_chart_income_3">#AED581</color> <!-- 浅黄绿 -->
+    <color name="compose_chart_income_4">#FFEE58</color> <!-- 黄色 -->
+    <color name="compose_chart_income_5">#FFCA28</color> <!-- 琥珀 -->
+    <color name="compose_chart_income_6">#FFA726</color> <!-- 橙色 -->
+    <color name="compose_chart_income_7">#FF7043</color> <!-- 深橙 -->
+    <color name="compose_chart_income_8">#FF8A65</color> <!-- 浅橙 -->
+    <color name="compose_chart_income_9">#FFB74D</color> <!-- 琥珀 -->
+    <color name="compose_chart_income_10">#FFD54F</color> <!-- 金色 -->
+    
+    <!-- Semantic Colors for Finance App -->
+    <color name="compose_income_green">#66BB6A</color>
+    <color name="compose_expense_red">#EF5350</color>
+    <color name="compose_investment_blue">#FFA726</color>
+    <color name="compose_savings_teal">#8D6E63</color>
+    
+    <!-- Status Colors -->
+    <color name="compose_success">#66BB6A</color>
+    <color name="compose_warning">#FFA726</color>
+    <color name="compose_error_red">#EF5350</color>
+    <color name="compose_info">#FFA726</color>
+</resources>

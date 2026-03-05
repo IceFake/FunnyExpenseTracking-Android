@@ -1,8 +1,41 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- Base application theme - Warm Theme -->
     <style name="Base.Theme.FunnyExpenseTrackingAndroid" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!-- Primary brand color -->
+        <item name="colorPrimary">@color/compose_primary</item>
+        <item name="colorOnPrimary">@color/compose_on_primary</item>
+        <item name="colorPrimaryContainer">@color/compose_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/compose_on_primary_container</item>
+        
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">@color/compose_secondary</item>
+        <item name="colorOnSecondary">@color/compose_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/compose_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/compose_on_secondary_container</item>
+        
+        <!-- Tertiary brand color -->
+        <item name="colorTertiary">@color/compose_tertiary</item>
+        <item name="colorOnTertiary">@color/compose_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/compose_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/compose_on_tertiary_container</item>
+        
+        <!-- Error color -->
+        <item name="colorError">@color/compose_error</item>
+        <item name="colorOnError">@color/compose_on_error</item>
+        <item name="colorErrorContainer">@color/compose_error_container</item>
+        <item name="colorOnErrorContainer">@color/compose_on_error_container</item>
+        
+        <!-- Background and surface -->
+        <item name="android:colorBackground">@color/compose_background</item>
+        <item name="colorOnBackground">@color/compose_on_background</item>
+        <item name="colorSurface">@color/compose_surface</item>
+        <item name="colorOnSurface">@color/compose_on_surface</item>
+        <item name="colorSurfaceVariant">@color/compose_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/compose_on_surface_variant</item>
+        
+        <!-- Outline -->
+        <item name="colorOutline">@color/compose_outline</item>
+        <item name="colorOutlineVariant">@color/compose_outline_variant</item>
     </style>
 
     <style name="Theme.FunnyExpenseTrackingAndroid" parent="Base.Theme.FunnyExpenseTrackingAndroid" />

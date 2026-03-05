@@ -21,3 +21,8 @@ release-key-base64.txt
 app/release-key.jks
 app/release-key-base64.txt
 
+# IDE config in app submodule
+app/.idea/
+
+# Claude Code installer
+install.cmd

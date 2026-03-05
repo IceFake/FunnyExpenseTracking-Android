@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">FunnyExpenseTracking-Android</string>
+    <string name="statistics_title">统计</string>
+    <string name="navigate_back">返回</string>
+    <string name="ai_analysis">AI分析</string>
+    <string name="financial_query">财务问答</string>
 </resources>

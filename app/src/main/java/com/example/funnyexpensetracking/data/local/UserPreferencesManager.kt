@@ -92,6 +92,29 @@ class UserPreferencesManager @Inject constructor(
         return getDeepSeekApiKey().isNotBlank()
     }
 
+    // ========================= 主题偏好（非敏感） =========================
+
+    /**
+     * 保存深色主题模式
+     * @param mode 0 = 跟随系统, 1 = 浅色, 2 = 深色
+     */
+    fun saveDarkThemeMode(mode: Int) {
+        prefs.edit().putInt(KEY_DARK_THEME_MODE, mode).apply()
+    }
+
+    /**
+     * 判断是否应使用深色主题
+     * @param isSystemInDarkTheme 系统当前是否处于深色主题
+     * @return true 表示应使用深色主题
+     */
+    fun shouldUseDarkTheme(isSystemInDarkTheme: Boolean): Boolean {
+        return when (prefs.getInt(KEY_DARK_THEME_MODE, 0)) {
+            1 -> false  // 强制浅色
+            2 -> true   // 强制深色
+            else -> isSystemInDarkTheme  // 跟随系统
+        }
+    }
+
     // ========================= AI 分析缓存（非敏感） =========================
 
     /**
@@ -152,6 +175,7 @@ class UserPreferencesManager @Inject constructor(
         private const val KEY_LAST_SELECTED_ACCOUNT_ID = "last_selected_account_id"
         private const val KEY_DEEPSEEK_API_KEY = "deepseek_api_key"
         private const val KEY_LAST_AI_ANALYSIS_RESULT = "last_ai_analysis_result"
+        private const val KEY_DARK_THEME_MODE = "dark_theme_mode"
         private val gson = Gson()
     }
 }
