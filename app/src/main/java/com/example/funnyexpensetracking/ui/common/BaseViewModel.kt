@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.reflect.KParameter
 
 /**
  * 错误状态接口，所有UI状态都应实现此接口以支持错误处理
@@ -136,7 +137,13 @@ fun <T : ErrorState> T.copyWithError(errorMessage: String?): T {
         if (copyMethod != null) {
             val errorParam = copyMethod.parameters.find { it.name == "errorMessage" }
             if (errorParam != null) {
-                copyMethod.callBy(mapOf(errorParam to errorMessage)) as T
+                val instanceParam = copyMethod.parameters.firstOrNull { it.kind == KParameter.Kind.INSTANCE }
+                    ?: return this  // instance parameter is required for a member function
+                val args = buildMap<KParameter, Any?> {
+                    put(instanceParam, this@copyWithError)
+                    put(errorParam, errorMessage)
+                }
+                copyMethod.callBy(args) as T
             } else {
                 this
             }
