@@ -66,26 +66,6 @@ jobs:
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          name: Release v${{ steps.version.outputs.VERSION }}
-          body: |
-            ## FunnyExpenseTracking v${{ steps.version.outputs.VERSION }}
-            
-            ### 更新内容
-            - 请在此处添加更新说明
-            
-            ### 下载
-            - 下载下方的 APK 文件安装
-          files: app/build/outputs/apk/release/FunnyExpenseTracking-v${{ steps.version.outputs.VERSION }}.apk
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Release (Manual Trigger)
-        uses: softprops/action-gh-release@v1
-        if: github.event_name == 'workflow_dispatch'
         with:
           tag_name: v${{ steps.version.outputs.VERSION }}
           name: Release v${{ steps.version.outputs.VERSION }}
