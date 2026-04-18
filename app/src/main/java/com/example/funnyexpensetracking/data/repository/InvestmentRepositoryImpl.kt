@@ -6,12 +6,12 @@ import com.example.funnyexpensetracking.data.local.entity.InvestmentCategory
 import com.example.funnyexpensetracking.data.local.entity.InvestmentEntity
 import com.example.funnyexpensetracking.data.remote.api.SinaFinanceApiService
 import com.example.funnyexpensetracking.data.remote.dto.SinaQuoteParser
-import com.example.funnyexpensetracking.data.remote.dto.StockPriceResult
 import com.example.funnyexpensetracking.domain.model.Investment
 import com.example.funnyexpensetracking.domain.model.InvestmentCategory as DomainCategory
 import com.example.funnyexpensetracking.domain.repository.InvestmentRepository
 import com.example.funnyexpensetracking.util.Resource
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -161,40 +161,27 @@ class InvestmentRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getTotalStockValue(): Double {
-        // 需要计算所有股票的当前价值
-        var total = 0.0
-        investmentDao.getAllInvestments().collect { entities ->
-            total = entities
-                .filter { it.category == InvestmentCategory.STOCK }
-                .sumOf { entity ->
-                    if (entity.currentPrice > 0) {
-                        entity.currentPrice * entity.quantity
-                    } else {
-                        entity.investment
-                    }
+        val entities = investmentDao.getAllInvestments().first()
+        return entities
+            .filter { it.category == InvestmentCategory.STOCK }
+            .sumOf { entity ->
+                if (entity.currentPrice > 0) {
+                    entity.currentPrice * entity.quantity
+                } else {
+                    entity.investment
                 }
-        }
-        return total
+            }
     }
 
     override suspend fun getTotalStockInvestment(): Double {
-        var total = 0.0
-        investmentDao.getAllInvestments().collect { entities ->
-            total = entities
-                .filter { it.category == InvestmentCategory.STOCK }
-                .sumOf { it.investment }
-        }
-        return total
+        val entities = investmentDao.getAllInvestments().first()
+        return entities
+            .filter { it.category == InvestmentCategory.STOCK }
+            .sumOf { it.investment }
     }
 
     override suspend fun getTotalCurrentValue(): Double {
-        var total = 0.0
-        investmentDao.getAllInvestments().collect { entities ->
-            total = entities.sumOf { entity ->
-                if (entity.currentValue > 0) entity.currentValue else entity.investment
-            }
-        }
-        return total
+        return investmentDao.getTotalCurrentValue()
     }
 
     override fun getTotalCurrentValueFlow(): Flow<Double> {
