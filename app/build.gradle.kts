@@ -22,17 +22,21 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("release-key.jks")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "funnyexpense123"
-            keyAlias = System.getenv("KEY_ALIAS") ?: "release-key"
-            keyPassword = System.getenv("KEY_PASSWORD") ?: "funnyexpense123"
+            val keystoreFile = file("release-key.jks")
+            storeFile = keystoreFile
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+            keyAlias = System.getenv("KEY_ALIAS") ?: ""
+            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            // Only apply the signing config when the keystore file is present (CI environment)
+            if (file("release-key.jks").exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -103,12 +107,12 @@ dependencies {
     implementation(libs.androidx.swiperefreshlayout)
 
     // Security - EncryptedSharedPreferences
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation(libs.androidx.security.crypto)
 
     // Network
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
-    implementation("com.squareup.retrofit2:converter-scalars:2.11.0")
+    implementation(libs.retrofit.converter.scalars)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.gson)
@@ -118,12 +122,12 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
 
     // MPAndroidChart
-    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    implementation(libs.mp.android.chart)
 
     // Markwon - Markdown渲染
-    implementation("io.noties.markwon:core:4.6.2")
-    implementation("io.noties.markwon:ext-strikethrough:4.6.2")
-    implementation("io.noties.markwon:ext-tables:4.6.2")
+    implementation(libs.markwon.core)
+    implementation(libs.markwon.ext.strikethrough)
+    implementation(libs.markwon.ext.tables)
 
     // Test
     testImplementation(libs.junit)

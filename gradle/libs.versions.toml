@@ -26,6 +26,12 @@ gson = "2.11.0"
 # Coroutines
 coroutines = "1.9.0"
 
+# Third-party
+securityCrypto = "1.1.0-alpha06"
+retrofitScalars = "2.11.0"
+mpAndroidChart = "v3.1.0"
+markwon = "4.6.2"
+
 # Compose
 composeBom = "2024.12.01"
 activityCompose = "1.9.3"
@@ -93,6 +99,16 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 # Coroutines
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+
+# Security
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+
+# Third-party
+retrofit-converter-scalars = { group = "com.squareup.retrofit2", name = "converter-scalars", version.ref = "retrofitScalars" }
+mp-android-chart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpAndroidChart" }
+markwon-core = { group = "io.noties.markwon", name = "core", version.ref = "markwon" }
+markwon-ext-strikethrough = { group = "io.noties.markwon", name = "ext-strikethrough", version.ref = "markwon" }
+markwon-ext-tables = { group = "io.noties.markwon", name = "ext-tables", version.ref = "markwon" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
