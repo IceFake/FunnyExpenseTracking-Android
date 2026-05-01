@@ -1,0 +1,1278 @@
+openapi: 3.1.0
+info:
+  title: FunnyExpenseTracking Backend API
+  version: 1.0.0
+  description: |
+    FunnyExpenseTracking 后端接口定义（OpenAPI 3.1）。
+
+    - 面向 Android 离线优先同步场景
+    - 覆盖交易/账户同步、股票行情、AI 分析、鉴权
+    - 响应结构兼容 `ApiResponse<T>`: code/message/data
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: https://api.your-domain.com
+    description: Production
+  - url: https://staging-api.your-domain.com
+    description: Staging
+tags:
+  - name: Auth
+  - name: Transactions
+  - name: Accounts
+  - name: Sync
+  - name: Stock
+  - name: AI
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: 用户注册
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: 用户登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: 刷新 Access Token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: 退出登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: 退出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /transactions/sync:
+    post:
+      tags: [Transactions, Sync]
+      summary: 交易数据同步（上传 + 增量拉取）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequest'
+      responses:
+        '200':
+          description: 同步成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: 同步冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /transactions:
+    get:
+      tags: [Transactions]
+      summary: 按时间范围查询交易
+      parameters:
+        - in: query
+          name: start_date
+          required: true
+          schema:
+            type: integer
+            format: int64
+            description: Unix epoch milliseconds
+        - in: query
+          name: end_date
+          required: true
+          schema:
+            type: integer
+            format: int64
+            description: Unix epoch milliseconds
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Transactions]
+      summary: 创建交易
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionDto'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /transactions/{id}:
+    put:
+      tags: [Transactions]
+      summary: 更新交易
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionDto'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags: [Transactions]
+      summary: 删除交易（软删除）
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /accounts/sync:
+    post:
+      tags: [Accounts, Sync]
+      summary: 账户数据同步（上传 + 增量拉取）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountSyncRequest'
+      responses:
+        '200':
+          description: 同步成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: 同步冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictResponse'
+
+  /accounts:
+    get:
+      tags: [Accounts]
+      summary: 获取账户列表
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Accounts]
+      summary: 创建账户
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountDto'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /accounts/{id}:
+    put:
+      tags: [Accounts]
+      summary: 更新账户
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountDto'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags: [Accounts]
+      summary: 删除账户（软删除）
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sync/changes:
+    get:
+      tags: [Sync]
+      summary: 获取多资源增量变更
+      parameters:
+        - in: query
+          name: since
+          required: true
+          schema:
+            type: integer
+            format: int64
+            description: Unix epoch milliseconds
+      responses:
+        '200':
+          description: 拉取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncChangesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /stock/quote/{symbol}:
+    get:
+      tags: [Stock]
+      summary: 获取单只股票行情
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+            example: sh600519
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockQuoteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /stock/realtime/{symbol}:
+    get:
+      tags: [Stock]
+      summary: 获取单只股票实时行情
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+            example: hk00700
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockQuoteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /stock/quotes:
+    post:
+      tags: [Stock]
+      summary: 批量获取股票行情
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchQuoteRequest'
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchQuoteApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /stock/search:
+    get:
+      tags: [Stock]
+      summary: 搜索股票
+      parameters:
+        - in: query
+          name: keyword
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockSearchResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /ai/analyze:
+    post:
+      tags: [AI]
+      summary: 发起 AI 消费习惯分析
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIAnalysisRequest'
+      responses:
+        '200':
+          description: 分析成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAnalysisResultResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ai/suggestions:
+    get:
+      tags: [AI]
+      summary: 获取 AI 建议
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /ai/history:
+    get:
+      tags: [AI]
+      summary: 获取历史分析记录
+      parameters:
+        - in: query
+          name: limit
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAnalysisResultListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /ai/result/{id}:
+    get:
+      tags: [AI]
+      summary: 获取指定分析结果
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAnalysisResultResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: 参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: 未认证或令牌无效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: 无权限
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: 资源冲突
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ConflictResponse'
+    TooManyRequests:
+      description: 请求过于频繁
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: 服务端错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ApiResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          examples: [200, 400, 401, 409, 500]
+        message:
+          type: string
+          example: ok
+        data: {}
+        request_id:
+          type: string
+          example: req_20260421_xxxxx
+
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              examples: [400, 401, 403, 404, 409, 429, 500]
+            message:
+              type: string
+              example: invalid request
+            data:
+              type: object
+              nullable: true
+
+    SuccessResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            message:
+              type: string
+              const: ok
+            data:
+              type: object
+
+    UnitResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            message:
+              type: string
+              const: ok
+            data:
+              type: object
+              nullable: true
+
+    User:
+      type: object
+      required: [id, nickname, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        nickname:
+          type: string
+        status:
+          type: string
+          enum: [active, disabled]
+          default: active
+        created_at:
+          type: integer
+          format: int64
+        updated_at:
+          type: integer
+          format: int64
+
+    RegisterRequest:
+      type: object
+      required: [password, nickname]
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        password:
+          type: string
+          minLength: 6
+        nickname:
+          type: string
+          minLength: 1
+      oneOf:
+        - required: [email]
+        - required: [phone]
+
+    LoginRequest:
+      type: object
+      required: [password, device_id]
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        password:
+          type: string
+        device_id:
+          type: string
+      oneOf:
+        - required: [email]
+        - required: [phone]
+
+    RefreshTokenRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    LogoutRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+        session_id:
+          type: integer
+          format: int64
+
+    AuthTokenData:
+      type: object
+      required: [access_token, refresh_token, expires_in, user]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          description: 秒
+          example: 7200
+        user:
+          $ref: '#/components/schemas/User'
+
+    AuthTokenResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            message:
+              type: string
+              const: ok
+            data:
+              $ref: '#/components/schemas/AuthTokenData'
+
+    AuthUserResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            message:
+              type: string
+              const: ok
+            data:
+              $ref: '#/components/schemas/User'
+
+    RefreshTokenResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              type: object
+              required: [access_token, expires_in]
+              properties:
+                access_token:
+                  type: string
+                expires_in:
+                  type: integer
+                  example: 7200
+
+    TransactionDto:
+      type: object
+      required: [id, amount, type, category, date, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 客户端同步时可传 0 表示新建
+        amount:
+          type: number
+          format: double
+        type:
+          type: string
+          description: 推荐 INCOME/EXPENSE（兼容大小写）
+          examples: [INCOME, EXPENSE, income, expense]
+        category:
+          type: string
+        note:
+          type: string
+          default: ''
+        date:
+          type: integer
+          format: int64
+        created_at:
+          type: integer
+          format: int64
+        updated_at:
+          type: integer
+          format: int64
+          nullable: true
+        version:
+          type: integer
+          format: int64
+          nullable: true
+
+    SyncRequest:
+      type: object
+      required: [transactions, last_sync_time]
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionDto'
+        last_sync_time:
+          type: integer
+          format: int64
+
+    TransactionResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              $ref: '#/components/schemas/TransactionDto'
+
+    TransactionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/TransactionDto'
+
+    AccountDto:
+      type: object
+      required: [id, name, balance, is_default, sort_order, updated_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 客户端同步时可传 0 表示新建
+        name:
+          type: string
+        icon:
+          type: string
+          default: ''
+        balance:
+          type: number
+          format: double
+        is_default:
+          type: boolean
+        sort_order:
+          type: integer
+        created_at:
+          type: integer
+          format: int64
+          nullable: true
+        updated_at:
+          type: integer
+          format: int64
+        version:
+          type: integer
+          format: int64
+          nullable: true
+
+    AccountSyncRequest:
+      type: object
+      required: [accounts, last_sync_time]
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountDto'
+        last_sync_time:
+          type: integer
+          format: int64
+
+    AccountResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              $ref: '#/components/schemas/AccountDto'
+
+    AccountListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/AccountDto'
+
+    Tombstone:
+      type: object
+      required: [entity_type, entity_id, deleted_at]
+      properties:
+        entity_type:
+          type: string
+          enum: [transaction, account]
+        entity_id:
+          type: integer
+          format: int64
+        deleted_at:
+          type: integer
+          format: int64
+
+    SyncChangesData:
+      type: object
+      required: [server_time, transactions, accounts, tombstones]
+      properties:
+        server_time:
+          type: integer
+          format: int64
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionDto'
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountDto'
+        tombstones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tombstone'
+
+    SyncChangesResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              $ref: '#/components/schemas/SyncChangesData'
+
+    ConflictDetail:
+      type: object
+      required:
+        - entity_type
+        - entity_id
+        - client_version
+        - server_version
+        - suggested_resolution
+      properties:
+        entity_type:
+          type: string
+          enum: [transaction, account]
+        entity_id:
+          type: integer
+          format: int64
+        client_version: {}
+        server_version: {}
+        suggested_resolution:
+          type: string
+          enum: [lww, manual, merge]
+
+    ConflictResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 409
+            message:
+              type: string
+              example: conflict detected
+            data:
+              $ref: '#/components/schemas/ConflictDetail'
+
+    StockQuoteDto:
+      type: object
+      required:
+        - symbol
+        - name
+        - current_price
+        - open_price
+        - high_price
+        - low_price
+        - close_price
+        - change
+        - change_percent
+        - volume
+        - timestamp
+      properties:
+        symbol:
+          type: string
+          example: sh600519
+        name:
+          type: string
+        current_price:
+          type: number
+          format: double
+        open_price:
+          type: number
+          format: double
+        high_price:
+          type: number
+          format: double
+        low_price:
+          type: number
+          format: double
+        close_price:
+          type: number
+          format: double
+        change:
+          type: number
+          format: double
+        change_percent:
+          type: number
+          format: double
+        volume:
+          type: integer
+          format: int64
+        timestamp:
+          type: integer
+          format: int64
+
+    BatchQuoteRequest:
+      type: object
+      required: [symbols]
+      properties:
+        symbols:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: string
+            example: gb_aapl
+
+    BatchQuoteResponse:
+      type: object
+      required: [quotes]
+      properties:
+        quotes:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockQuoteDto'
+
+    StockQuoteResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              $ref: '#/components/schemas/StockQuoteDto'
+
+    BatchQuoteApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              $ref: '#/components/schemas/BatchQuoteResponse'
+
+    StockSearchResult:
+      type: object
+      required: [symbol, name]
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        exchange:
+          type: string
+          nullable: true
+
+    StockSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/StockSearchResult'
+
+    FixedIncomeDto:
+      type: object
+      required: [id, name, amount, type, frequency]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        amount:
+          type: number
+          format: double
+        type:
+          type: string
+          examples: [income, expense, INCOME, EXPENSE]
+        frequency:
+          type: string
+          examples: [daily, weekly, monthly, yearly]
+
+    AIAnalysisRequest:
+      type: object
+      required: [user_id, transactions, fixed_incomes, analysis_type]
+      properties:
+        user_id:
+          type: string
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionDto'
+        fixed_incomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FixedIncomeDto'
+        analysis_type:
+          type: string
+          example: habit
+
+    HabitInsightDto:
+      type: object
+      required: [category, insight, trend]
+      properties:
+        category:
+          type: string
+        insight:
+          type: string
+        trend:
+          type: string
+          enum: [increasing, stable, decreasing]
+
+    SuggestionDto:
+      type: object
+      required: [title, description, priority]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [high, medium, low]
+
+    PredictionDto:
+      type: object
+      required: [next_month_expense, next_month_income, savings_potential]
+      properties:
+        next_month_expense:
+          type: number
+          format: double
+        next_month_income:
+          type: number
+          format: double
+        savings_potential:
+          type: number
+          format: double
+
+    AIAnalysisResultDto:
+      type: object
+      required:
+        - analysis_id
+        - summary
+        - spending_habits
+        - suggestions
+        - generated_at
+      properties:
+        analysis_id:
+          type: string
+        summary:
+          type: string
+        spending_habits:
+          type: array
+          items:
+            $ref: '#/components/schemas/HabitInsightDto'
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuggestionDto'
+        predictions:
+          $ref: '#/components/schemas/PredictionDto'
+          nullable: true
+        generated_at:
+          type: integer
+          format: int64
+
+    AIAnalysisResultResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              $ref: '#/components/schemas/AIAnalysisResultDto'
+
+    AIAnalysisResultListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/AIAnalysisResultDto'
+
+    SuggestionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            code:
+              type: integer
+              const: 200
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/SuggestionDto'
+
