@@ -701,6 +701,125 @@ app/src/main/java/com/example/funnyexpensetracking/
 | 项目 | 要求 |
 |------|------|
 | Android Studio | Ladybug (2024.2) 或更高 |
-| JDK | 11+ |
+| JDK | 17 |
 | Android SDK | compileSdk 36, minSdk 24 |
 | Gradle | 8.10.1（Kotlin DSL）|
+
+### 克隆与构建
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/IceFake/FunnyExpenseTracking-Android.git
+cd FunnyExpenseTracking-Android
+
+# 2. 在 Android Studio 中打开项目，等待 Gradle 同步完成
+
+# 3. 构建 Debug APK
+./gradlew assembleDebug
+
+# 4. 安装到已连接设备
+./gradlew installDebug
+
+# 5. 构建 Release APK（需配置签名，见下方说明）
+./gradlew assembleRelease
+```
+
+**APK 产物路径：**
+
+| 构建类型 | 路径 |
+|---------|------|
+| Debug | `app/build/outputs/apk/debug/app-debug.apk` |
+| Release | `app/build/outputs/apk/release/app-release.apk` |
+
+---
+
+### 配置说明
+
+#### 1. DeepSeek API Key
+
+AI 分析和财务问答功能需要 DeepSeek API Key，在应用运行后于 **用户中心** 页面填写，Key 通过 `EncryptedSharedPreferences`（AES256-GCM）加密存储在设备本地：
+
+1. 访问 [platform.deepseek.com](https://platform.deepseek.com/) 注册并创建 API Key
+2. 打开应用 → **用户中心** → **AI 设置** → 填入 API Key
+3. 保存后即可使用 AI 智能分析和自然语言问答功能
+
+#### 2. 后端同步服务（可选）
+
+数据云同步功能需要配置后端服务器地址。在 `di/NetworkModule.kt` 中修改：
+
+```kotlin
+private const val BASE_URL = "https://your-backend-server.com/api/"
+```
+
+如不配置后端，应用将以 **纯离线模式** 运行，所有功能（除数据同步外）均可正常使用。
+
+#### 3. Release 签名配置
+
+Release 构建需要提供签名密钥文件。可通过环境变量配置，或在本地将密钥文件放置于 `app/release-key.jks`：
+
+| 环境变量 | 说明 |
+|---------|------|
+| `KEYSTORE_BASE64` | Base64 编码的 .jks 密钥文件（CI 使用） |
+| `KEYSTORE_PASSWORD` | Keystore 密码 |
+| `KEY_ALIAS` | Key 别名 |
+| `KEY_PASSWORD` | Key 密码 |
+
+---
+
+### 常用 Gradle 命令
+
+```bash
+./gradlew assembleDebug          # 构建 Debug APK
+./gradlew assembleRelease        # 构建 Release APK（需签名配置）
+./gradlew installDebug           # 安装 Debug APK 到设备
+./gradlew test                   # 运行单元测试
+./gradlew connectedAndroidTest   # 运行仪器测试（需连接设备/模拟器）
+./gradlew lint                   # 代码质量检查
+./gradlew clean                  # 清理构建产物
+```
+
+---
+
+## 🤖 CI/CD
+
+项目使用 **GitHub Actions** 实现自动化构建和发布，配置文件位于 `.github/workflows/release.yml`。
+
+### 触发方式
+
+| 触发条件 | 说明 |
+|---------|------|
+| 推送 `v*` 格式的 Tag（如 `v1.0.0`）| 自动构建 Release APK 并发布到 GitHub Releases |
+| 手动触发（Workflow Dispatch）| 输入版本号后手动执行构建和发布 |
+
+### 构建流程
+
+1. 检出代码（`actions/checkout@v4`）
+2. 配置 JDK 17（Temurin 发行版，启用 Gradle 缓存）
+3. 从 Secrets 解码并写入 Keystore 文件
+4. 执行 `./gradlew assembleRelease` 构建签名 APK
+5. 重命名 APK 为 `FunnyExpenseTracking-v{版本号}.apk`
+6. 上传 APK 作为 Workflow Artifact
+7. 创建 GitHub Release 并附加 APK
+
+### 所需 Secrets
+
+在仓库的 **Settings → Secrets and variables → Actions** 中配置：
+
+| Secret 名称 | 说明 |
+|------------|------|
+| `KEYSTORE_BASE64` | Base64 编码的签名密钥文件 |
+| `KEYSTORE_PASSWORD` | Keystore 密码 |
+| `KEY_ALIAS` | Key 别名 |
+| `KEY_PASSWORD` | Key 密码 |
+
+---
+
+## 📄 许可证
+
+本项目基于 [MIT License](LICENSE) 开源。
+
+```
+MIT License
+
+Copyright (c) 2026 FunnyExpenseTracking Team
+```
