@@ -158,15 +158,14 @@ class SyncManager @Inject constructor(
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body?.code == 200) {
-                        val syncPayload = body.data
-                        val serverTransactions = syncPayload?.syncedTransactions.orEmpty()
+                        val serverTransactions = body.data.orEmpty()
 
                         // 处理服务端返回的 serverId 映射
                         for (entity in toUpload) {
                             val match = findServerTransactionForLocal(entity, serverTransactions)
-                            val serverId = match?.id?.takeIf { it.isNotBlank() }
+                            val serverId = match?.id?.takeIf { it > 0 }
                             if (serverId != null) {
-                                transactionDao.updateServerId(entity.id, serverId, SyncStatus.SYNCED)
+                                transactionDao.updateServerId(entity.id, serverId.toString(), SyncStatus.SYNCED)
                             } else {
                                 transactionDao.updateSyncStatus(entity.id, SyncStatus.SYNCED)
                             }
@@ -187,7 +186,7 @@ class SyncManager @Inject constructor(
             // --- 处理待删除 ---
             if (toDelete.isNotEmpty()) {
                 for (entity in toDelete) {
-                    entity.serverId?.let { serverId ->
+                    entity.serverId?.toLongOrNull()?.let { serverId ->
                         val response = expenseApiService.deleteTransaction(serverId)
                         if (response.isSuccessful) {
                             transactionDao.delete(entity)
@@ -219,8 +218,8 @@ class SyncManager @Inject constructor(
             if (response.isSuccessful && response.body()?.code == 200) {
                 val serverTransactions = response.body()?.data ?: emptyList()
                 for (serverTx in serverTransactions) {
-                    serverTx.id?.let { serverId ->
-                        val localEntity = transactionDao.getByServerId(serverId)
+                        serverTx.id?.let { serverId ->
+                            val localEntity = transactionDao.getByServerId(serverId.toString())
                         if (localEntity != null) {
                             // LWW: 比较 updatedAt，保留服务端版本
                             if (serverTx.updatedAt != null &&
@@ -278,9 +277,9 @@ class SyncManager @Inject constructor(
 
                         for (entity in toUpload) {
                             val match = findServerAccountForLocal(entity, serverAccounts)
-                            val serverId = match?.id?.takeIf { it.isNotBlank() }
+                            val serverId = match?.id?.takeIf { it > 0 }
                             if (serverId != null) {
-                                accountDao.updateServerId(entity.id, serverId, SyncStatus.SYNCED)
+                                accountDao.updateServerId(entity.id, serverId.toString(), SyncStatus.SYNCED)
                             } else {
                                 accountDao.updateSyncStatus(entity.id, SyncStatus.SYNCED)
                             }
@@ -299,7 +298,7 @@ class SyncManager @Inject constructor(
             // --- 处理待删除 ---
             if (toDelete.isNotEmpty()) {
                 for (entity in toDelete) {
-                    entity.serverId?.let { serverId ->
+                    entity.serverId?.toLongOrNull()?.let { serverId ->
                         val response = accountApiService.deleteAccount(serverId)
                         if (response.isSuccessful) {
                             accountDao.delete(entity)
@@ -326,8 +325,8 @@ class SyncManager @Inject constructor(
             if (response.isSuccessful && response.body()?.code == 200) {
                 val serverAccounts = response.body()?.data ?: emptyList()
                 for (serverAcct in serverAccounts) {
-                    serverAcct.id?.let { serverId ->
-                        val localEntity = accountDao.getByServerId(serverId)
+                        serverAcct.id?.let { serverId ->
+                            val localEntity = accountDao.getByServerId(serverId.toString())
                         if (localEntity != null) {
                             if (serverAcct.updatedAt != null &&
                                 localEntity.updatedAt < serverAcct.updatedAt) {
@@ -443,7 +442,7 @@ class SyncManager @Inject constructor(
     ): TransactionDto? {
         val localServerId = local.serverId
         if (!localServerId.isNullOrBlank()) {
-            serverList.firstOrNull { it.id == localServerId }?.let { return it }
+            serverList.firstOrNull { it.id?.toString() == localServerId }?.let { return it }
         }
         // 按时间戳最接近匹配
         return serverList.minByOrNull { dto ->
@@ -457,7 +456,7 @@ class SyncManager @Inject constructor(
     ): AccountDto? {
         val localServerId = local.serverId
         if (!localServerId.isNullOrBlank()) {
-            serverList.firstOrNull { it.id == localServerId }?.let { return it }
+            serverList.firstOrNull { it.id?.toString() == localServerId }?.let { return it }
         }
         return serverList.minByOrNull { dto ->
             kotlin.math.abs((dto.createdAt ?: 0L) - local.createdAt)
@@ -468,7 +467,7 @@ class SyncManager @Inject constructor(
 
     private fun TransactionEntity.toSyncDto(): TransactionDto {
         return TransactionDto(
-            id = serverId,
+            id = serverId?.toLongOrNull() ?: 0L,
             amount = amount,
             type = type.name,
             category = category,
@@ -483,7 +482,7 @@ class SyncManager @Inject constructor(
 
     private fun TransactionDto.toEntity(): TransactionEntity {
         return TransactionEntity(
-            serverId = id?.takeIf { it.isNotBlank() },
+            serverId = id?.takeIf { it > 0 }?.toString(),
             amount = amount,
             type = try { TransactionType.valueOf(type) } catch (_: Exception) { TransactionType.EXPENSE },
             category = category,
@@ -501,7 +500,7 @@ class SyncManager @Inject constructor(
 
     private fun AccountEntity.toSyncDto(): AccountDto {
         return AccountDto(
-            id = serverId,
+            id = serverId?.toLongOrNull() ?: 0L,
             name = name,
             icon = icon,
             balance = balance,
@@ -514,7 +513,7 @@ class SyncManager @Inject constructor(
 
     private fun AccountDto.toEntity(): AccountEntity {
         return AccountEntity(
-            serverId = id?.takeIf { it.isNotBlank() },
+            serverId = id?.takeIf { it > 0 }?.toString(),
             name = name,
             icon = icon,
             balance = balance,

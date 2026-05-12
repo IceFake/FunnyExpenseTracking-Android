@@ -7,20 +7,20 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.funnyexpensetracking.data.local.dao.InvestmentDao
 import com.example.funnyexpensetracking.data.local.dao.StockHoldingDao
-import com.example.funnyexpensetracking.data.remote.api.SinaFinanceApiService
-import com.example.funnyexpensetracking.data.remote.dto.SinaQuoteParser
+import com.example.funnyexpensetracking.data.remote.api.StockApiService
+import com.example.funnyexpensetracking.data.remote.dto.BatchQuoteRequest
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 
 /**
- * 股票价格同步 Worker — 每 15 分钟通过新浪财经 API 同步最新股价
+ * 股票价格同步 Worker — 每 15 分钟通过后端股票行情代理同步最新股价
  *
  * 同步范围：
  * 1. investments 表中 category = 'STOCK' 的所有记录（description 字段存储股票代码）
  * 2. stock_holdings 表中的所有持仓记录（symbol 字段存储股票代码）
  *
- * 股票代码格式（新浪财经）：
+ * 股票代码格式（后端代理支持与新浪一致）：
  * - A 股上证：sh600519
  * - A 股深证：sz000001
  * - 港股：hk00700
@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.first
  *
  * 工作流程：
  * 1. 从两张表中收集所有需要同步的股票代码（去重）
- * 2. 调用新浪财经 API 批量获取行情
+ * 2. 调用后端股票行情代理批量获取行情
  * 3. 解析响应并分别更新两张表中的 currentPrice
  */
 @HiltWorker
@@ -37,7 +37,7 @@ class StockPriceSyncWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val investmentDao: InvestmentDao,
     private val stockHoldingDao: StockHoldingDao,
-    private val sinaFinanceApiService: SinaFinanceApiService
+    private val stockApiService: StockApiService
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -62,9 +62,8 @@ class StockPriceSyncWorker @AssistedInject constructor(
 
             Log.d(TAG, "待同步股票: ${allSymbols.joinToString(", ")}")
 
-            // 2. 批量查询新浪财经 API（逗号分隔）
-            val symbolsParam = allSymbols.joinToString(",")
-            val response = sinaFinanceApiService.getQuotes(symbolsParam)
+            // 2. 批量查询后端股票行情代理
+            val response = stockApiService.getBatchQuotes(BatchQuoteRequest(allSymbols))
 
             if (!response.isSuccessful || response.body() == null) {
                 Log.e(TAG, "API 请求失败: ${response.code()} ${response.message()}")
@@ -72,7 +71,7 @@ class StockPriceSyncWorker @AssistedInject constructor(
             }
 
             // 3. 解析响应
-            val quotes = SinaQuoteParser.parse(response.body()!!)
+            val quotes = response.body()!!.data?.quotes.orEmpty()
 
             if (quotes.isEmpty()) {
                 Log.w(TAG, "未解析到有效行情数据")
@@ -85,7 +84,7 @@ class StockPriceSyncWorker @AssistedInject constructor(
             var updatedCount = 0
             for (quote in quotes) {
                 val symbolLower = quote.symbol.lowercase()
-                val price = quote.currentPrice
+                val price = quote.currentPrice ?: 0.0
 
                 if (price <= 0) continue
 

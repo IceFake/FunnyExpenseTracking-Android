@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.example.funnyexpensetracking.data.remote.api
 
 import com.example.funnyexpensetracking.data.remote.dto.AccountDto
@@ -9,6 +11,7 @@ import retrofit2.http.*
 /**
  * 账户同步 API（与 funny-expense-backend 的 /accounts 对齐）
  */
+@Suppress("unused")
 interface AccountApiService {
 
     @POST("accounts/sync")
@@ -21,8 +24,8 @@ interface AccountApiService {
     suspend fun createAccount(@Body account: AccountDto): Response<ApiResponse<AccountDto>>
 
     @PUT("accounts/{id}")
-    suspend fun updateAccount(@Path("id") id: String, @Body account: AccountDto): Response<ApiResponse<AccountDto>>
+    suspend fun updateAccount(@Path("id") id: Long, @Body account: AccountDto): Response<ApiResponse<AccountDto>>
 
     @DELETE("accounts/{id}")
-    suspend fun deleteAccount(@Path("id") id: String): Response<ApiResponse<Unit>>
+    suspend fun deleteAccount(@Path("id") id: Long): Response<ApiResponse<Unit>>
 }

@@ -122,7 +122,9 @@ class UserCenterViewModel @Inject constructor(
     }
 
     fun logoutBackend() {
-        authRepository.logout()
+        viewModelScope.launch {
+            authRepository.logout()
+        }
     }
 }
 

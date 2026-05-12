@@ -1,13 +1,17 @@
+@file:Suppress("unused")
+
 package com.example.funnyexpensetracking.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.example.funnyexpensetracking.domain.model.AIAnalysisResult
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,6 +27,7 @@ import javax.inject.Singleton
  * - 如果 EncryptedSharedPreferences 初始化失败（低版本设备等极端情况），
  *   自动降级到普通 SharedPreferences 并输出日志警告。
  */
+@Suppress("unused")
 @Singleton
 class UserPreferencesManager @Inject constructor(
     @ApplicationContext context: Context
@@ -42,7 +47,7 @@ class UserPreferencesManager @Inject constructor(
      * 保存用户上次选择的账户ID
      */
     fun saveLastSelectedAccountId(accountId: Long) {
-        prefs.edit().putLong(KEY_LAST_SELECTED_ACCOUNT_ID, accountId).apply()
+        prefs.edit { putLong(KEY_LAST_SELECTED_ACCOUNT_ID, accountId) }
     }
 
     /**
@@ -56,7 +61,7 @@ class UserPreferencesManager @Inject constructor(
     // ========================= 后端 JWT（敏感，加密存储） =========================
 
     fun saveAuthToken(token: String) {
-        securePrefs.edit().putString(KEY_AUTH_TOKEN, token).apply()
+        securePrefs.edit { putString(KEY_AUTH_TOKEN, token) }
     }
 
     fun getAuthToken(): String {
@@ -68,11 +73,11 @@ class UserPreferencesManager @Inject constructor(
     }
 
     fun clearAuthToken() {
-        securePrefs.edit().remove(KEY_AUTH_TOKEN).apply()
+        securePrefs.edit { remove(KEY_AUTH_TOKEN) }
     }
 
     fun saveRefreshToken(token: String) {
-        securePrefs.edit().putString(KEY_REFRESH_TOKEN, token).apply()
+        securePrefs.edit { putString(KEY_REFRESH_TOKEN, token) }
     }
 
     fun getRefreshToken(): String {
@@ -80,7 +85,7 @@ class UserPreferencesManager @Inject constructor(
     }
 
     fun clearRefreshToken() {
-        securePrefs.edit().remove(KEY_REFRESH_TOKEN).apply()
+        securePrefs.edit { remove(KEY_REFRESH_TOKEN) }
     }
 
     /** 是否存在可恢复的后端会话（Access 或 Refresh 任一有效） */
@@ -92,15 +97,40 @@ class UserPreferencesManager @Inject constructor(
     fun clearBackendSession() {
         clearAuthToken()
         clearRefreshToken()
-        prefs.edit().remove(KEY_BACKEND_USER_EMAIL).apply()
+        prefs.edit { remove(KEY_BACKEND_USER_EMAIL) }
+        clearBackendUserId()
     }
 
     fun saveBackendUserEmail(email: String) {
-        prefs.edit().putString(KEY_BACKEND_USER_EMAIL, email).apply()
+        prefs.edit { putString(KEY_BACKEND_USER_EMAIL, email) }
     }
 
     fun getBackendUserEmail(): String {
         return prefs.getString(KEY_BACKEND_USER_EMAIL, null).orEmpty()
+    }
+
+    fun saveBackendUserId(userId: String) {
+        prefs.edit { putString(KEY_BACKEND_USER_ID, userId) }
+    }
+
+    fun getBackendUserId(): String {
+        return prefs.getString(KEY_BACKEND_USER_ID, null).orEmpty()
+    }
+
+    fun clearBackendUserId() {
+        prefs.edit { remove(KEY_BACKEND_USER_ID) }
+    }
+
+    /**
+     * 获取或生成稳定的设备标识，用于 /auth/login 的 device_id。
+     */
+    fun getOrCreateDeviceId(): String {
+        val existing = prefs.getString(KEY_DEVICE_ID, null)
+        if (!existing.isNullOrBlank()) return existing
+
+        val generated = UUID.randomUUID().toString()
+        prefs.edit { putString(KEY_DEVICE_ID, generated) }
+        return generated
     }
 
     // ========================= API Key（敏感，加密存储） =========================
@@ -109,7 +139,7 @@ class UserPreferencesManager @Inject constructor(
      * 保存DeepSeek API Key（加密存储）
      */
     fun saveDeepSeekApiKey(apiKey: String) {
-        securePrefs.edit().putString(KEY_DEEPSEEK_API_KEY, apiKey).apply()
+        securePrefs.edit { putString(KEY_DEEPSEEK_API_KEY, apiKey) }
     }
 
     /**
@@ -127,8 +157,8 @@ class UserPreferencesManager @Inject constructor(
         val legacyKey = prefs.getString(KEY_DEEPSEEK_API_KEY, null)
         if (!legacyKey.isNullOrBlank()) {
             Log.d(TAG, "检测到旧版 API Key，正在迁移到加密存储...")
-            securePrefs.edit().putString(KEY_DEEPSEEK_API_KEY, legacyKey).apply()
-            prefs.edit().remove(KEY_DEEPSEEK_API_KEY).apply()
+            securePrefs.edit { putString(KEY_DEEPSEEK_API_KEY, legacyKey) }
+            prefs.edit { remove(KEY_DEEPSEEK_API_KEY) }
             return legacyKey
         }
 
@@ -138,6 +168,7 @@ class UserPreferencesManager @Inject constructor(
     /**
      * 检查是否已配置DeepSeek API Key
      */
+    @Suppress("unused")
     fun hasDeepSeekApiKey(): Boolean {
         return getDeepSeekApiKey().isNotBlank()
     }
@@ -148,8 +179,9 @@ class UserPreferencesManager @Inject constructor(
      * 保存深色主题模式
      * @param mode 0 = 跟随系统, 1 = 浅色, 2 = 深色
      */
+    @Suppress("unused")
     fun saveDarkThemeMode(mode: Int) {
-        prefs.edit().putInt(KEY_DARK_THEME_MODE, mode).apply()
+        prefs.edit { putInt(KEY_DARK_THEME_MODE, mode) }
     }
 
     /**
@@ -172,7 +204,7 @@ class UserPreferencesManager @Inject constructor(
      */
     fun saveLastAIAnalysisResult(result: AIAnalysisResult) {
         val json = gson.toJson(result)
-        prefs.edit().putString(KEY_LAST_AI_ANALYSIS_RESULT, json).apply()
+        prefs.edit { putString(KEY_LAST_AI_ANALYSIS_RESULT, json) }
     }
 
     /**
@@ -183,7 +215,7 @@ class UserPreferencesManager @Inject constructor(
         val json = prefs.getString(KEY_LAST_AI_ANALYSIS_RESULT, null) ?: return null
         return try {
             gson.fromJson(json, AIAnalysisResult::class.java)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -191,6 +223,7 @@ class UserPreferencesManager @Inject constructor(
     /**
      * 检查是否有缓存的AI分析结果
      */
+    @Suppress("unused")
     fun hasLastAIAnalysisResult(): Boolean {
         return prefs.contains(KEY_LAST_AI_ANALYSIS_RESULT)
     }
@@ -226,6 +259,8 @@ class UserPreferencesManager @Inject constructor(
         private const val KEY_AUTH_TOKEN = "backend_auth_token"
         private const val KEY_REFRESH_TOKEN = "backend_refresh_token"
         private const val KEY_BACKEND_USER_EMAIL = "backend_user_email"
+        private const val KEY_BACKEND_USER_ID = "backend_user_id"
+        private const val KEY_DEVICE_ID = "backend_device_id"
         private const val KEY_DEEPSEEK_API_KEY = "deepseek_api_key"
         private const val KEY_LAST_AI_ANALYSIS_RESULT = "last_ai_analysis_result"
         private const val KEY_DARK_THEME_MODE = "dark_theme_mode"

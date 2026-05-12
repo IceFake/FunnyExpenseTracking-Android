@@ -2,6 +2,7 @@ package com.example.funnyexpensetracking.data.repository
 
 import com.example.funnyexpensetracking.data.local.dao.FixedIncomeDao
 import com.example.funnyexpensetracking.data.local.dao.TransactionDao
+import com.example.funnyexpensetracking.data.local.UserPreferencesManager
 import com.example.funnyexpensetracking.data.remote.api.AIAnalysisApiService
 import com.example.funnyexpensetracking.data.remote.dto.AIAnalysisRequest
 import com.example.funnyexpensetracking.data.remote.dto.AIAnalysisResultDto
@@ -25,7 +26,8 @@ import com.example.funnyexpensetracking.data.local.entity.FixedIncomeType as Ent
 class AIAnalysisRepositoryImpl @Inject constructor(
     private val aiAnalysisApiService: AIAnalysisApiService,
     private val transactionDao: TransactionDao,
-    private val fixedIncomeDao: FixedIncomeDao
+    private val fixedIncomeDao: FixedIncomeDao,
+    private val userPreferencesManager: UserPreferencesManager
 ) : AIAnalysisRepository {
 
     override suspend fun analyzeHabits(): Resource<AIAnalysisResult> {
@@ -33,23 +35,31 @@ class AIAnalysisRepositoryImpl @Inject constructor(
             val transactions = transactionDao.getAllTransactions().first()
             val fixedIncomes = fixedIncomeDao.getAllActiveFixedIncomes().first()
 
+            val userId = userPreferencesManager.getBackendUserId()
+                .ifBlank { userPreferencesManager.getBackendUserEmail() }
+                .ifBlank { userPreferencesManager.getOrCreateDeviceId() }
+
             val request = AIAnalysisRequest(
-                userId = null,
+                userId = userId,
                 transactions = transactions.map { it.toAnalysisWireDto() },
                 fixedIncomes = fixedIncomes.map { entity ->
                     FixedIncomeDto(
-                        id = entity.id.toString(),
+                        id = entity.id,
                         name = entity.name,
                         amount = entity.amount,
-                        type = if (entity.type == EntityFixedIncomeType.INCOME) "INCOME" else "EXPENSE",
-                        frequency = entity.frequency.name,
+                        type = if (entity.type == EntityFixedIncomeType.INCOME) "income" else "expense",
+                        frequency = entity.frequency.name.lowercase(),
                         startDate = null,
                         endDate = null,
+                        isActive = entity.isActive,
+                        accumulatedMinutes = entity.accumulatedMinutes,
+                        accumulatedAmount = entity.accumulatedAmount,
+                        lastRecordTime = entity.lastRecordTime,
                         createdAt = entity.createdAt,
                         updatedAt = null
                     )
                 },
-                analysisType = "SPENDING_HABITS"
+                analysisType = "habit"
             )
 
             val response = aiAnalysisApiService.analyzeHabits(request)
@@ -116,14 +126,15 @@ class AIAnalysisRepositoryImpl @Inject constructor(
 
     private fun com.example.funnyexpensetracking.data.local.entity.TransactionEntity.toAnalysisWireDto(): TransactionDto {
         return TransactionDto(
-            id = serverId,
+            id = serverId?.toLongOrNull() ?: id,
             amount = amount,
             type = type.name,
             category = category,
             note = note,
             date = date,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            accountId = accountId
         )
     }
 
@@ -134,8 +145,8 @@ class AIAnalysisRepositoryImpl @Inject constructor(
             summary = summary.orEmpty(),
             spendingHabits = habitDtos.map { it.toDomainHabit() },
             suggestions = suggestions.orEmpty().map { it.toDomainSuggestion() },
-            predictions = predictions?.firstOrNull()?.toDomainPrediction(),
-            generatedAt = generatedAt ?: generatedAtSnake ?: createdAt ?: System.currentTimeMillis()
+            predictions = predictions?.toDomainPrediction(),
+            generatedAt = generatedAt ?: createdAt ?: System.currentTimeMillis()
         )
     }
 

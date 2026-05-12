@@ -4,8 +4,8 @@ import android.util.Log
 import com.example.funnyexpensetracking.data.local.dao.InvestmentDao
 import com.example.funnyexpensetracking.data.local.entity.InvestmentCategory
 import com.example.funnyexpensetracking.data.local.entity.InvestmentEntity
-import com.example.funnyexpensetracking.data.remote.api.SinaFinanceApiService
-import com.example.funnyexpensetracking.data.remote.dto.SinaQuoteParser
+import com.example.funnyexpensetracking.data.remote.api.StockApiService
+import com.example.funnyexpensetracking.data.remote.dto.BatchQuoteRequest
 import com.example.funnyexpensetracking.domain.model.Investment
 import com.example.funnyexpensetracking.domain.model.InvestmentCategory as DomainCategory
 import com.example.funnyexpensetracking.domain.repository.InvestmentRepository
@@ -23,7 +23,7 @@ import javax.inject.Singleton
 @Singleton
 class InvestmentRepositoryImpl @Inject constructor(
     private val investmentDao: InvestmentDao,
-    private val sinaFinanceApiService: SinaFinanceApiService
+    private val stockApiService: StockApiService
 ) : InvestmentRepository {
 
     companion object {
@@ -70,33 +70,30 @@ class InvestmentRepositoryImpl @Inject constructor(
                 return Resource.Success(Unit)
             }
 
-            // 转换股票代码为新浪格式
+            // 转换股票代码为后端行情代理格式
             val sinaSymbols = stockCodes.map { convertToSinaSymbol(it) }
             val symbolsParam = sinaSymbols.joinToString(",")
-            Log.d(TAG, "请求新浪财经 API, symbols: $symbolsParam")
+            Log.d(TAG, "请求后端股票行情 API, symbols: $symbolsParam")
 
-            val response = sinaFinanceApiService.getQuotes(symbolsParam)
+            val response = stockApiService.getBatchQuotes(BatchQuoteRequest(sinaSymbols))
             Log.d(TAG, "API响应码: ${response.code()}, 是否成功: ${response.isSuccessful}")
 
             if (response.isSuccessful && response.body() != null) {
-                val responseText = response.body()!!
-                Log.d(TAG, "API响应内容: $responseText")
+                val quotes = response.body()!!.data?.quotes.orEmpty()
+                Log.d(TAG, "解析到 ${quotes.size} 个股票价格")
 
-                val priceResults = SinaQuoteParser.parse(responseText)
-                Log.d(TAG, "解析到 ${priceResults.size} 个股票价格")
-
-                if (priceResults.isEmpty()) {
+                if (quotes.isEmpty()) {
                     Log.w(TAG, "没有获取到有效的股票价格数据")
                     return Resource.Error("未找到股票数据，请检查股票代码格式")
                 }
 
                 // 更新每个股票的价格
-                priceResults.forEach { result ->
-                    Log.d(TAG, "更新股票 ${result.symbol} 价格: ${result.currentPrice}")
+                quotes.forEach { result ->
+                    Log.d(TAG, "更新股票 ${result.symbol} 价格: ${result.currentPrice ?: 0.0}")
                     // 找到原始代码并更新
                     val originalCode = findOriginalCode(stockCodes, result.symbol)
                     if (originalCode != null) {
-                        investmentDao.updateStockPrice(originalCode, result.currentPrice)
+                        investmentDao.updateStockPrice(originalCode, result.currentPrice ?: 0.0)
                     }
                 }
 

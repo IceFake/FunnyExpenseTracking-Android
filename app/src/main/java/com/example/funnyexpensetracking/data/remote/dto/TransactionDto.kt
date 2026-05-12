@@ -15,31 +15,32 @@ data class ApiResponse<T>(
  * 交易记录 DTO（与后端 TransactionDto 的 JSON 命名一致：camelCase）
  */
 data class TransactionDto(
-    @SerializedName("id") var id: String? = null,
+    @SerializedName("id") var id: Long? = null,
     @SerializedName("amount") val amount: Double,
     @SerializedName("type") val type: String,
     @SerializedName("category") val category: String,
-    @SerializedName("accountId") val accountId: Long? = null,
+    @SerializedName(value = "account_id", alternate = ["accountId"]) val accountId: Long? = null,
     @SerializedName("note") val note: String = "",
     @SerializedName("date") val date: Long,
-    @SerializedName("createdAt") val createdAt: Long? = null,
-    @SerializedName("updatedAt") val updatedAt: Long? = null,
-    @SerializedName("deletedAt") val deletedAt: Long? = null
+    @SerializedName(value = "created_at", alternate = ["createdAt"]) val createdAt: Long? = null,
+    @SerializedName(value = "updated_at", alternate = ["updatedAt"]) val updatedAt: Long? = null,
+    @SerializedName(value = "version", alternate = ["version"]) val version: Long? = null,
+    @SerializedName(value = "deleted_at", alternate = ["deletedAt"]) val deletedAt: Long? = null
 )
 
 /**
  * 账户 DTO（与后端 AccountDto 对齐）
  */
 data class AccountDto(
-    @SerializedName("id") var id: String? = null,
+    @SerializedName("id") var id: Long? = null,
     @SerializedName("name") val name: String,
     @SerializedName("icon") val icon: String = "",
     @SerializedName("balance") val balance: Double = 0.0,
-    @SerializedName("isDefault") val isDefault: Boolean = false,
-    @SerializedName("sortOrder") val sortOrder: Int = 0,
-    @SerializedName("createdAt") val createdAt: Long? = null,
-    @SerializedName("updatedAt") val updatedAt: Long? = null,
-    @SerializedName("deletedAt") val deletedAt: Long? = null
+    @SerializedName(value = "is_default", alternate = ["isDefault"]) val isDefault: Boolean = false,
+    @SerializedName(value = "sort_order", alternate = ["sortOrder"]) val sortOrder: Int = 0,
+    @SerializedName(value = "created_at", alternate = ["createdAt"]) val createdAt: Long? = null,
+    @SerializedName(value = "updated_at", alternate = ["updatedAt"]) val updatedAt: Long? = null,
+    @SerializedName(value = "deleted_at", alternate = ["deletedAt"]) val deletedAt: Long? = null
 )
 
 /**
@@ -47,7 +48,7 @@ data class AccountDto(
  */
 data class SyncRequest(
     @SerializedName("transactions") val transactions: List<TransactionDto>,
-    @SerializedName("lastSyncTime") val lastSyncTime: Long
+    @SerializedName(value = "last_sync_time", alternate = ["lastSyncTime"]) val lastSyncTime: Long
 )
 
 /**
@@ -55,11 +56,11 @@ data class SyncRequest(
  */
 data class AccountSyncRequest(
     @SerializedName("accounts") val accounts: List<AccountDto>,
-    @SerializedName("lastSyncTime") val lastSyncTime: Long
+    @SerializedName(value = "last_sync_time", alternate = ["lastSyncTime"]) val lastSyncTime: Long
 )
 
 data class SyncConflictDto(
-    @SerializedName("transactionId") val transactionId: String? = null,
+    @SerializedName("transactionId") val transactionId: Long? = null,
     @SerializedName("clientVersion") val clientVersion: TransactionDto? = null,
     @SerializedName("serverVersion") val serverVersion: TransactionDto? = null
 )

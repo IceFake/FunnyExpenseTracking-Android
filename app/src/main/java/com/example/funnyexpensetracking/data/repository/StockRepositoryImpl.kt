@@ -4,6 +4,7 @@ import com.example.funnyexpensetracking.data.local.dao.StockHoldingDao
 import com.example.funnyexpensetracking.data.local.entity.StockHoldingEntity
 import com.example.funnyexpensetracking.data.remote.api.StockApiService
 import com.example.funnyexpensetracking.data.remote.dto.BatchQuoteRequest
+import com.example.funnyexpensetracking.data.remote.dto.StockQuoteDto
 import com.example.funnyexpensetracking.domain.model.StockHolding
 import com.example.funnyexpensetracking.domain.model.StockQuote
 import com.example.funnyexpensetracking.domain.repository.StockRepository
@@ -11,8 +12,6 @@ import com.example.funnyexpensetracking.util.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.Instant
-import java.time.format.DateTimeParseException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -161,16 +160,16 @@ class StockRepositoryImpl @Inject constructor(
         return StockHoldingEntity(id = id, symbol = symbol, name = name, shares = shares, purchasePrice = purchasePrice, totalCost = totalCost, purchaseDate = purchaseDate, currentPrice = currentPrice, lastUpdated = lastUpdated, createdAt = System.currentTimeMillis())
     }
 
-    private fun com.example.funnyexpensetracking.data.remote.dto.StockQuoteDto.toDomainModel(): StockQuote {
-        val cp = price ?: currentPriceSnake ?: 0.0
-        val op = open ?: openPriceSnake ?: previousClose ?: 0.0
-        val hi = high ?: highPriceSnake ?: cp
-        val lo = low ?: lowPriceSnake ?: cp
-        val pc = previousClose ?: closePriceSnake ?: cp
-        val ch = change ?: 0.0
-        val pct = changePercent ?: 0.0
+    private fun StockQuoteDto.toDomainModel(): StockQuote {
+        val cp = currentPrice ?: 0.0
+        val op = openPrice ?: cp
+        val hi = highPrice ?: cp
+        val lo = lowPrice ?: cp
+        val pc = closePrice ?: cp
+        val ch = change ?: (cp - pc)
+        val pct = changePercent ?: if (pc != 0.0) (ch / pc) * 100 else 0.0
         val vol = volume ?: 0L
-        val ts = parseStockTimestamp(timestamp)
+        val ts = timestamp ?: System.currentTimeMillis()
         return StockQuote(
             symbol = symbol,
             name = name,
@@ -184,19 +183,6 @@ class StockRepositoryImpl @Inject constructor(
             volume = vol,
             timestamp = ts
         )
-    }
-
-    private fun parseStockTimestamp(raw: String?): Long {
-        if (raw.isNullOrBlank()) return System.currentTimeMillis()
-        return try {
-            Instant.parse(raw).toEpochMilli()
-        } catch (_: DateTimeParseException) {
-            try {
-                Instant.parse(raw.replace(" ", "T")).toEpochMilli()
-            } catch (_: Exception) {
-                System.currentTimeMillis()
-            }
-        }
     }
 }
 
