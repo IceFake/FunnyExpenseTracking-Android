@@ -1,10 +1,16 @@
 package com.example.funnyexpensetracking.di
 
+import com.example.funnyexpensetracking.BuildConfig
+import com.example.funnyexpensetracking.data.remote.AuthInterceptor
 import com.example.funnyexpensetracking.data.remote.api.*
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.Strictness
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import com.example.funnyexpensetracking.data.remote.TokenAuthenticator
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -22,19 +28,63 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://your-backend-server.com/api/" // TODO: 替换为实际后端地址
+    private val BASE_URL: String
+        get() = BuildConfig.API_BASE_URL
     private const val YAHOO_FINANCE_BASE_URL = "https://query1.finance.yahoo.com/"
     private const val SINA_FINANCE_BASE_URL = "https://hq.sinajs.cn/"
     private const val DEEPSEEK_BASE_URL = "https://api.deepseek.com/"
 
+    /**
+     * 仅用于 auth/refresh：无 Bearer 拦截、无 [TokenAuthenticator]，避免 401 死循环。
+     */
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    @Named("authBareClient")
+    fun provideAuthBareOkHttpClient(): OkHttpClient {
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+        return OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @Named("authBare")
+    fun provideAuthBareRetrofit(
+        @Named("authBareClient") okHttpClient: OkHttpClient,
+        @Named("lenientGson") gson: Gson
+    ): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthTokenRefreshApiService(@Named("authBare") retrofit: Retrofit): AuthTokenRefreshApiService {
+        return retrofit.create(AuthTokenRefreshApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator
+    ): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
 
         return OkHttpClient.Builder()
+            .authenticator(tokenAuthenticator)
+            .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -76,22 +126,25 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("default")
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideRetrofit(okHttpClient: OkHttpClient, @Named("lenientGson") gson: Gson): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
 
     @Provides
     @Singleton
     @Named("yahooFinance")
-    fun provideYahooFinanceRetrofit(@Named("yahooFinanceClient") okHttpClient: OkHttpClient): Retrofit {
+    fun provideYahooFinanceRetrofit(
+        @Named("yahooFinanceClient") okHttpClient: OkHttpClient,
+        gson: Gson
+    ): Retrofit {
         return Retrofit.Builder()
             .baseUrl(YAHOO_FINANCE_BASE_URL)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
 
@@ -179,12 +232,21 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("deepSeek")
-    fun provideDeepSeekRetrofit(@Named("deepSeekClient") okHttpClient: OkHttpClient): Retrofit {
+    fun provideDeepSeekRetrofit(
+        @Named("deepSeekClient") okHttpClient: OkHttpClient,
+        gson: Gson
+    ): Retrofit {
         return Retrofit.Builder()
             .baseUrl(DEEPSEEK_BASE_URL)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthApiService(@Named("default") retrofit: Retrofit): AuthApiService {
+        return retrofit.create(AuthApiService::class.java)
     }
 
     @Provides
@@ -225,14 +287,30 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    fun provideAccountApiService(@Named("default") retrofit: Retrofit): AccountApiService {
+        return retrofit.create(AccountApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
     fun provideDeepSeekApiService(@Named("deepSeek") retrofit: Retrofit): DeepSeekApiService {
         return retrofit.create(DeepSeekApiService::class.java)
     }
 
     @Provides
     @Singleton
-    fun provideGson(): com.google.gson.Gson {
-        return com.google.gson.Gson()
+    @Named("lenientGson")
+    fun provideLenientGson(): Gson {
+        return GsonBuilder()
+            .setStrictness(Strictness.LENIENT)
+            .create()
+    }
+
+    @Provides
+    @Singleton
+    fun provideGson(): Gson {
+        return GsonBuilder()
+            .create()
     }
 }
 

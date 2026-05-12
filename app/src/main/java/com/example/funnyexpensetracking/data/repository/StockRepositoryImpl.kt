@@ -11,6 +11,8 @@ import com.example.funnyexpensetracking.util.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.time.Instant
+import java.time.format.DateTimeParseException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -62,8 +64,9 @@ class StockRepositoryImpl @Inject constructor(
             val response = stockApiService.getQuote(symbol)
             if (response.isSuccessful && response.body()?.data != null) {
                 val dto = response.body()!!.data!!
-                stockHoldingDao.updatePrice(symbol, dto.currentPrice)
-                Resource.Success(dto.toDomainModel())
+                val quote = dto.toDomainModel()
+                stockHoldingDao.updatePrice(symbol, quote.currentPrice)
+                Resource.Success(quote)
             } else {
                 Resource.Error(response.message() ?: "获取行情失败")
             }
@@ -139,8 +142,9 @@ class StockRepositoryImpl @Inject constructor(
             val response = stockApiService.getRealtimeQuote(symbol)
             if (response.isSuccessful && response.body()?.data != null) {
                 val dto = response.body()!!.data!!
-                stockHoldingDao.updatePrice(symbol, dto.currentPrice)
-                Resource.Success(dto.toDomainModel())
+                val quote = dto.toDomainModel()
+                stockHoldingDao.updatePrice(symbol, quote.currentPrice)
+                Resource.Success(quote)
             } else {
                 Resource.Error(response.message() ?: "获取实时行情失败")
             }
@@ -158,7 +162,41 @@ class StockRepositoryImpl @Inject constructor(
     }
 
     private fun com.example.funnyexpensetracking.data.remote.dto.StockQuoteDto.toDomainModel(): StockQuote {
-        return StockQuote(symbol = symbol, name = name, currentPrice = currentPrice, openPrice = openPrice, highPrice = highPrice, lowPrice = lowPrice, closePrice = closePrice, change = change, changePercent = changePercent, volume = volume, timestamp = timestamp)
+        val cp = price ?: currentPriceSnake ?: 0.0
+        val op = open ?: openPriceSnake ?: previousClose ?: 0.0
+        val hi = high ?: highPriceSnake ?: cp
+        val lo = low ?: lowPriceSnake ?: cp
+        val pc = previousClose ?: closePriceSnake ?: cp
+        val ch = change ?: 0.0
+        val pct = changePercent ?: 0.0
+        val vol = volume ?: 0L
+        val ts = parseStockTimestamp(timestamp)
+        return StockQuote(
+            symbol = symbol,
+            name = name,
+            currentPrice = cp,
+            openPrice = op,
+            highPrice = hi,
+            lowPrice = lo,
+            closePrice = pc,
+            change = ch,
+            changePercent = pct,
+            volume = vol,
+            timestamp = ts
+        )
+    }
+
+    private fun parseStockTimestamp(raw: String?): Long {
+        if (raw.isNullOrBlank()) return System.currentTimeMillis()
+        return try {
+            Instant.parse(raw).toEpochMilli()
+        } catch (_: DateTimeParseException) {
+            try {
+                Instant.parse(raw.replace(" ", "T")).toEpochMilli()
+            } catch (_: Exception) {
+                System.currentTimeMillis()
+            }
+        }
     }
 }
 

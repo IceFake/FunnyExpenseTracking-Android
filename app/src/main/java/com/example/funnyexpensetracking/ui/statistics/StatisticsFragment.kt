@@ -12,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.funnyexpensetracking.MainActivity
 import com.example.funnyexpensetracking.R
 import com.example.funnyexpensetracking.databinding.FragmentStatisticsBinding
 import com.example.funnyexpensetracking.domain.model.CategoryStat
@@ -22,7 +23,6 @@ import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.util.CurrencyUtil
 import com.github.mikephil.charting.animation.Easing
 import com.github.mikephil.charting.charts.PieChart
-import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
@@ -88,6 +88,16 @@ class StatisticsFragment : Fragment() {
         setupViews()
         setupClickListeners()
         observeState()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        setBottomNavigationVisible(false)
+    }
+
+    override fun onPause() {
+        setBottomNavigationVisible(true)
+        super.onPause()
     }
 
     private fun setupViews() {
@@ -354,7 +364,12 @@ class StatisticsFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        setBottomNavigationVisible(true)
         super.onDestroyView()
         _binding = null
+    }
+
+    private fun setBottomNavigationVisible(visible: Boolean) {
+        (activity as? MainActivity)?.setBottomNavigationVisible(visible)
     }
 }

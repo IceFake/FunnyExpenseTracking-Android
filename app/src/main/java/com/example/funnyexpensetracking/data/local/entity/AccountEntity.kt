@@ -10,7 +10,7 @@ import androidx.room.PrimaryKey
 data class AccountEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val serverId: Long? = null,            // 服务器端ID（用于同步）
+    val serverId: String? = null,          // 服务器端主键（UUID 字符串）
     val name: String,                      // 账户名称（如：现金、微信、支付宝、银行卡）
     val icon: String = "",                 // 图标名称
     val balance: Double = 0.0,             // 账户余额

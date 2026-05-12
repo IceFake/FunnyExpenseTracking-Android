@@ -53,6 +53,56 @@ class UserPreferencesManager @Inject constructor(
         return prefs.getLong(KEY_LAST_SELECTED_ACCOUNT_ID, 0L)
     }
 
+    // ========================= 后端 JWT（敏感，加密存储） =========================
+
+    fun saveAuthToken(token: String) {
+        securePrefs.edit().putString(KEY_AUTH_TOKEN, token).apply()
+    }
+
+    fun getAuthToken(): String {
+        return securePrefs.getString(KEY_AUTH_TOKEN, null).orEmpty()
+    }
+
+    fun hasAuthToken(): Boolean {
+        return getAuthToken().isNotBlank()
+    }
+
+    fun clearAuthToken() {
+        securePrefs.edit().remove(KEY_AUTH_TOKEN).apply()
+    }
+
+    fun saveRefreshToken(token: String) {
+        securePrefs.edit().putString(KEY_REFRESH_TOKEN, token).apply()
+    }
+
+    fun getRefreshToken(): String {
+        return securePrefs.getString(KEY_REFRESH_TOKEN, null).orEmpty()
+    }
+
+    fun clearRefreshToken() {
+        securePrefs.edit().remove(KEY_REFRESH_TOKEN).apply()
+    }
+
+    /** 是否存在可恢复的后端会话（Access 或 Refresh 任一有效） */
+    fun hasBackendSession(): Boolean {
+        return hasAuthToken() || getRefreshToken().isNotBlank()
+    }
+
+    /** 清除后端登录态（Access、Refresh、本地记录的邮箱） */
+    fun clearBackendSession() {
+        clearAuthToken()
+        clearRefreshToken()
+        prefs.edit().remove(KEY_BACKEND_USER_EMAIL).apply()
+    }
+
+    fun saveBackendUserEmail(email: String) {
+        prefs.edit().putString(KEY_BACKEND_USER_EMAIL, email).apply()
+    }
+
+    fun getBackendUserEmail(): String {
+        return prefs.getString(KEY_BACKEND_USER_EMAIL, null).orEmpty()
+    }
+
     // ========================= API Key（敏感，加密存储） =========================
 
     /**
@@ -173,6 +223,9 @@ class UserPreferencesManager @Inject constructor(
         private const val PREFS_NAME = "funny_expense_tracking_prefs"
         private const val SECURE_PREFS_NAME = "funny_expense_tracking_secure_prefs"
         private const val KEY_LAST_SELECTED_ACCOUNT_ID = "last_selected_account_id"
+        private const val KEY_AUTH_TOKEN = "backend_auth_token"
+        private const val KEY_REFRESH_TOKEN = "backend_refresh_token"
+        private const val KEY_BACKEND_USER_EMAIL = "backend_user_email"
         private const val KEY_DEEPSEEK_API_KEY = "deepseek_api_key"
         private const val KEY_LAST_AI_ANALYSIS_RESULT = "last_ai_analysis_result"
         private const val KEY_DARK_THEME_MODE = "dark_theme_mode"

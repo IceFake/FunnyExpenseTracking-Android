@@ -1,6 +1,7 @@
 package com.example.funnyexpensetracking
 
 import android.os.Bundle
+import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -16,15 +17,25 @@ import com.example.funnyexpensetracking.ui.calendar.CalendarFragment
 import com.example.funnyexpensetracking.ui.fixedincome.FixedIncomeFragment
 import com.example.funnyexpensetracking.ui.investment.InvestmentFragment
 import com.example.funnyexpensetracking.ui.transaction.TransactionFragment
+import com.example.funnyexpensetracking.data.local.UserPreferencesManager
+import com.example.funnyexpensetracking.data.remote.TokenRefresher
+// removed unused import: LoginActivity
 import com.example.funnyexpensetracking.ui.usercenter.UserCenterFragment
 import com.example.funnyexpensetracking.worker.AssetSnapshotWorker
 import com.example.funnyexpensetracking.worker.StockPriceSyncWorker
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+
+    @Inject
+    lateinit var userPreferencesManager: UserPreferencesManager
+
+    @Inject
+    lateinit var tokenRefresher: TokenRefresher
 
     private lateinit var bottomNavigation: BottomNavigationView
 
@@ -36,8 +47,18 @@ class MainActivity : AppCompatActivity() {
     private var userCenterFragment: UserCenterFragment? = null
     private var activeFragment: Fragment? = null
 
+    fun setBottomNavigationVisible(visible: Boolean) {
+        bottomNavigation.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Offline-first: do not force login on app start. Allow the app to run without backend session.
+        // If a backend session exists, attempt to ensure access token is available (non-blocking startup).
+        if (userPreferencesManager.hasBackendSession()) {
+            // Try to refresh tokens to keep session valid, but do NOT redirect or finish the activity on failure.
+            tokenRefresher.ensureAccessOrRefresh()
+        }
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->

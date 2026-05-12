@@ -28,7 +28,7 @@ enum class SyncStatus {
 data class TransactionEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val serverId: Long? = null,            // 服务器端ID（用于同步）
+    val serverId: String? = null,          // 服务器端主键（UUID 字符串）
     val amount: Double,                    // 金额
     val type: TransactionType,             // 类型：收入/支出
     val category: String,                  // 分类（如：餐饮、交通、工资等）

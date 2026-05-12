@@ -92,6 +92,82 @@ object DatabaseModule {
         }
     }
 
+    /**
+     * 7→8：服务端主键为 UUID 字符串，本地 serverId 由 INTEGER 改为 TEXT。
+     */
+    private val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `transactions_new` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `serverId` TEXT,
+                    `amount` REAL NOT NULL,
+                    `type` TEXT NOT NULL,
+                    `category` TEXT NOT NULL,
+                    `accountId` INTEGER NOT NULL,
+                    `note` TEXT NOT NULL,
+                    `date` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    `syncStatus` TEXT NOT NULL,
+                    `lastSyncAt` INTEGER
+                )
+                """.trimIndent()
+            )
+            database.execSQL(
+                """
+                INSERT INTO `transactions_new` (
+                    `id`, `serverId`, `amount`, `type`, `category`, `accountId`, `note`,
+                    `date`, `createdAt`, `updatedAt`, `syncStatus`, `lastSyncAt`
+                )
+                SELECT
+                    `id`,
+                    CASE WHEN `serverId` IS NULL THEN NULL ELSE CAST(`serverId` AS TEXT) END,
+                    `amount`, `type`, `category`, `accountId`, `note`,
+                    `date`, `createdAt`, `updatedAt`, `syncStatus`, `lastSyncAt`
+                FROM `transactions`
+                """.trimIndent()
+            )
+            database.execSQL("DROP TABLE `transactions`")
+            database.execSQL("ALTER TABLE `transactions_new` RENAME TO `transactions`")
+
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `accounts_new` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `serverId` TEXT,
+                    `name` TEXT NOT NULL,
+                    `icon` TEXT NOT NULL,
+                    `balance` REAL NOT NULL,
+                    `isDefault` INTEGER NOT NULL,
+                    `sortOrder` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    `syncStatus` TEXT NOT NULL,
+                    `lastSyncAt` INTEGER
+                )
+                """.trimIndent()
+            )
+            database.execSQL(
+                """
+                INSERT INTO `accounts_new` (
+                    `id`, `serverId`, `name`, `icon`, `balance`, `isDefault`, `sortOrder`,
+                    `createdAt`, `updatedAt`, `syncStatus`, `lastSyncAt`
+                )
+                SELECT
+                    `id`,
+                    CASE WHEN `serverId` IS NULL THEN NULL ELSE CAST(`serverId` AS TEXT) END,
+                    `name`, `icon`, `balance`, `isDefault`, `sortOrder`,
+                    `createdAt`, `updatedAt`, `syncStatus`, `lastSyncAt`
+                FROM `accounts`
+                """.trimIndent()
+            )
+            database.execSQL("DROP TABLE `accounts`")
+            database.execSQL("ALTER TABLE `accounts_new` RENAME TO `accounts`")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -100,7 +176,13 @@ object DatabaseModule {
             AppDatabase::class.java,
             "funny_expense_db"
         )
-            .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+            .addMigrations(
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_6_7,
+                MIGRATION_7_8
+            )
             .fallbackToDestructiveMigration()
             .build()
     }

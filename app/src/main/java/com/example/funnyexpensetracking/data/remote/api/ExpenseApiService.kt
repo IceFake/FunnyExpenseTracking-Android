@@ -5,14 +5,14 @@ import retrofit2.Response
 import retrofit2.http.*
 
 /**
- * 记账数据同步API
+ * 记账数据同步 API（与 funny-expense-backend 一致，context-path 已含在 baseUrl 的 /v1/）
  */
 interface ExpenseApiService {
 
     @POST("transactions/sync")
     suspend fun syncTransactions(
         @Body request: SyncRequest
-    ): Response<ApiResponse<List<TransactionDto>>>
+    ): Response<ApiResponse<SyncResponseDto>>
 
     @GET("transactions")
     suspend fun getTransactions(
@@ -27,13 +27,12 @@ interface ExpenseApiService {
 
     @PUT("transactions/{id}")
     suspend fun updateTransaction(
-        @Path("id") id: Long,
+        @Path("id") id: String,
         @Body transaction: TransactionDto
     ): Response<ApiResponse<TransactionDto>>
 
     @DELETE("transactions/{id}")
     suspend fun deleteTransaction(
-        @Path("id") id: Long
+        @Path("id") id: String
     ): Response<ApiResponse<Unit>>
 }
-

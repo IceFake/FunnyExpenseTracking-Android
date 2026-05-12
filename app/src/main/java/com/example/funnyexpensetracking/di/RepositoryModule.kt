@@ -30,8 +30,14 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAIAnalysisRepository(
-        impl: DeepSeekAnalysisRepositoryImpl
+        impl: AIAnalysisRepositoryImpl
     ): AIAnalysisRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(
+        impl: AuthRepositoryImpl
+    ): AuthRepository
 
     @Binds
     @Singleton

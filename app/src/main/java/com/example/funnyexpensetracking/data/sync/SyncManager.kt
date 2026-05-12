@@ -7,10 +7,12 @@ import com.example.funnyexpensetracking.data.local.entity.AccountEntity
 import com.example.funnyexpensetracking.data.local.entity.SyncMetadataEntity
 import com.example.funnyexpensetracking.data.local.entity.SyncStatus
 import com.example.funnyexpensetracking.data.local.entity.TransactionEntity
+import com.example.funnyexpensetracking.data.local.entity.TransactionType
+import com.example.funnyexpensetracking.data.remote.api.AccountApiService
 import com.example.funnyexpensetracking.data.remote.api.ExpenseApiService
-import com.example.funnyexpensetracking.data.remote.dto.SyncRequest
-import com.example.funnyexpensetracking.data.remote.dto.TransactionDto
+import com.example.funnyexpensetracking.data.remote.dto.*
 import com.example.funnyexpensetracking.util.NetworkMonitor
+import com.example.funnyexpensetracking.data.local.UserPreferencesManager
 import com.example.funnyexpensetracking.util.NetworkStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,10 +50,12 @@ class SyncManager @Inject constructor(
     private val accountDao: AccountDao,
     private val syncMetadataDao: SyncMetadataDao,
     private val expenseApiService: ExpenseApiService,
-    private val networkMonitor: NetworkMonitor
+    private val accountApiService: AccountApiService,
+    private val networkMonitor: NetworkMonitor,
+    private val userPreferencesManager: UserPreferencesManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    
+
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
@@ -64,31 +68,22 @@ class SyncManager @Inject constructor(
     }
 
     init {
-        // 监听网络状态，网络恢复时自动同步
         observeNetworkAndSync()
-        // 初始化待同步计数
         updatePendingSyncCount()
     }
 
-    /**
-     * 监听网络状态变化并自动同步
-     */
     private fun observeNetworkAndSync() {
         scope.launch {
             networkMonitor.observeNetworkStatus()
                 .filter { it == NetworkStatus.AVAILABLE }
                 .collect {
-                    // 网络恢复时，自动同步待处理的数据
-                    if (_pendingSyncCount.value > 0) {
+                    if (_pendingSyncCount.value > 0 && userPreferencesManager.hasBackendSession()) {
                         syncAll()
                     }
                 }
         }
     }
 
-    /**
-     * 更新待同步计数
-     */
     private fun updatePendingSyncCount() {
         scope.launch {
             val transactionCount = transactionDao.getPendingSyncCount()
@@ -101,6 +96,10 @@ class SyncManager @Inject constructor(
      * 同步所有数据
      */
     suspend fun syncAll(): SyncResult<Int> {
+        if (!userPreferencesManager.hasBackendSession()) {
+            return SyncResult.Error("未登录，数据已保存在本地，登录后将自动同步")
+        }
+
         if (!networkMonitor.isNetworkAvailable()) {
             return SyncResult.Error("网络不可用，数据已保存在本地")
         }
@@ -109,13 +108,11 @@ class SyncManager @Inject constructor(
         var totalSynced = 0
 
         try {
-            // 同步交易记录
             val transactionResult = syncTransactions()
             if (transactionResult is SyncResult.Success) {
                 totalSynced += transactionResult.data
             }
 
-            // 同步账户数据
             val accountResult = syncAccounts()
             if (accountResult is SyncResult.Success) {
                 totalSynced += accountResult.data
@@ -124,7 +121,6 @@ class SyncManager @Inject constructor(
             _syncState.value = SyncState.Success(totalSynced)
             updatePendingSyncCount()
             return SyncResult.Success(totalSynced)
-
         } catch (e: Exception) {
             val errorMessage = "同步失败: ${e.message}"
             _syncState.value = SyncState.Error(errorMessage, e)
@@ -132,51 +128,63 @@ class SyncManager @Inject constructor(
         }
     }
 
-    /**
-     * 同步交易记录
-     */
+    // ========================================================================
+    //  交易同步
+    // ========================================================================
+
     suspend fun syncTransactions(): SyncResult<Int> {
         if (!networkMonitor.isNetworkAvailable()) {
             return SyncResult.Error("网络不可用")
         }
 
         try {
-            // 获取待同步的交易记录
             val pendingTransactions = transactionDao.getPendingSyncTransactions()
             if (pendingTransactions.isEmpty()) {
                 return SyncResult.Success(0)
             }
 
-            // 分离待上传和待删除的记录
             val toUpload = pendingTransactions.filter { it.syncStatus == SyncStatus.PENDING_UPLOAD }
             val toDelete = pendingTransactions.filter { it.syncStatus == SyncStatus.PENDING_DELETE }
 
             var syncedCount = 0
 
-            // 上传新增/修改的记录
+            // --- 上传新增/修改 ---
             if (toUpload.isNotEmpty()) {
-                val dtos = toUpload.map { it.toDto() }
+                val dtos = toUpload.map { it.toSyncDto() }
                 val lastSyncTime = syncMetadataDao.getByTableName(TABLE_TRANSACTIONS)?.lastSyncTimestamp ?: 0
                 val request = SyncRequest(dtos, lastSyncTime)
 
                 val response = expenseApiService.syncTransactions(request)
-                if (response.isSuccessful && response.body()?.code == 200) {
-                    val serverTransactions = response.body()?.data ?: emptyList()
-                    
-                    // 更新本地记录的服务器ID和同步状态
-                    toUpload.forEachIndexed { index, entity ->
-                        val serverData = serverTransactions.getOrNull(index)
-                        if (serverData != null) {
-                            transactionDao.updateServerId(entity.id, serverData.id)
-                        } else {
-                            transactionDao.updateSyncStatus(entity.id, SyncStatus.SYNCED)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body?.code == 200) {
+                        val syncPayload = body.data
+                        val serverTransactions = syncPayload?.syncedTransactions.orEmpty()
+
+                        // 处理服务端返回的 serverId 映射
+                        for (entity in toUpload) {
+                            val match = findServerTransactionForLocal(entity, serverTransactions)
+                            val serverId = match?.id?.takeIf { it.isNotBlank() }
+                            if (serverId != null) {
+                                transactionDao.updateServerId(entity.id, serverId, SyncStatus.SYNCED)
+                            } else {
+                                transactionDao.updateSyncStatus(entity.id, SyncStatus.SYNCED)
+                            }
                         }
+                        syncedCount += toUpload.size
+                    } else {
+                        // 处理业务错误
+                        return SyncResult.Error("同步交易失败: ${body?.message}")
                     }
-                    syncedCount += toUpload.size
+                } else if (response.code() == 409) {
+                    // --- 冲突处理 ---
+                    return handleTransactionConflict(toUpload)
+                } else {
+                    return SyncResult.Error("服务器返回错误: ${response.code()}")
                 }
             }
 
-            // 处理待删除的记录
+            // --- 处理待删除 ---
             if (toDelete.isNotEmpty()) {
                 for (entity in toDelete) {
                     entity.serverId?.let { serverId ->
@@ -186,18 +194,14 @@ class SyncManager @Inject constructor(
                             syncedCount++
                         }
                     } ?: run {
-                        // 没有服务器ID的直接删除
                         transactionDao.delete(entity)
                         syncedCount++
                     }
                 }
             }
 
-            // 更新同步元数据
             updateSyncMetadata(TABLE_TRANSACTIONS)
-
             return SyncResult.Success(syncedCount)
-
         } catch (e: Exception) {
             updateSyncError(TABLE_TRANSACTIONS, e.message)
             return SyncResult.Error("同步交易记录失败: ${e.message}", e)
@@ -205,8 +209,45 @@ class SyncManager @Inject constructor(
     }
 
     /**
-     * 同步账户数据
+     * 处理 409 冲突：LWW（最后写入者胜出）
      */
+    private suspend fun handleTransactionConflict(toUpload: List<TransactionEntity>): SyncResult<Int> {
+        try {
+            // 以服务端版本为准（LWW策略），重新拉取服务端数据覆盖本地
+            val now = System.currentTimeMillis()
+            val response = expenseApiService.getTransactions(0, now)
+            if (response.isSuccessful && response.body()?.code == 200) {
+                val serverTransactions = response.body()?.data ?: emptyList()
+                for (serverTx in serverTransactions) {
+                    serverTx.id?.let { serverId ->
+                        val localEntity = transactionDao.getByServerId(serverId)
+                        if (localEntity != null) {
+                            // LWW: 比较 updatedAt，保留服务端版本
+                            if (serverTx.updatedAt != null &&
+                                (localEntity.updatedAt < serverTx.updatedAt ||
+                                        localEntity.syncStatus == SyncStatus.CONFLICT)) {
+                                transactionDao.update(serverTx.toEntity().copy(id = localEntity.id))
+                            }
+                        }
+                    }
+                }
+                // 将冲突记录标记为已同步
+                for (entity in toUpload) {
+                    transactionDao.updateSyncStatus(entity.id, SyncStatus.SYNCED)
+                }
+                updateSyncMetadata(TABLE_TRANSACTIONS)
+                return SyncResult.Success(toUpload.size)
+            }
+            return SyncResult.Error("冲突处理失败")
+        } catch (e: Exception) {
+            return SyncResult.Error("冲突处理失败: ${e.message}")
+        }
+    }
+
+    // ========================================================================
+    //  账户同步（已实现真实 API 调用）
+    // ========================================================================
+
     suspend fun syncAccounts(): SyncResult<Int> {
         if (!networkMonitor.isNetworkAvailable()) {
             return SyncResult.Error("网络不可用")
@@ -218,24 +259,100 @@ class SyncManager @Inject constructor(
                 return SyncResult.Success(0)
             }
 
-            // TODO: 实现账户同步API调用
-            // 暂时只更新本地同步状态
-            val ids = pendingAccounts.map { it.id }
-            accountDao.updateSyncStatusBatch(ids, SyncStatus.SYNCED)
+            val toUpload = pendingAccounts.filter { it.syncStatus == SyncStatus.PENDING_UPLOAD }
+            val toDelete = pendingAccounts.filter { it.syncStatus == SyncStatus.PENDING_DELETE }
+
+            var syncedCount = 0
+
+            // --- 上传新增/修改 ---
+            if (toUpload.isNotEmpty()) {
+                val dtos = toUpload.map { it.toSyncDto() }
+                val lastSyncTime = syncMetadataDao.getByTableName(TABLE_ACCOUNTS)?.lastSyncTimestamp ?: 0
+                val request = AccountSyncRequest(dtos, lastSyncTime)
+
+                val response = accountApiService.syncAccounts(request)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body?.code == 200) {
+                        val serverAccounts = body.data ?: emptyList()
+
+                        for (entity in toUpload) {
+                            val match = findServerAccountForLocal(entity, serverAccounts)
+                            val serverId = match?.id?.takeIf { it.isNotBlank() }
+                            if (serverId != null) {
+                                accountDao.updateServerId(entity.id, serverId, SyncStatus.SYNCED)
+                            } else {
+                                accountDao.updateSyncStatus(entity.id, SyncStatus.SYNCED)
+                            }
+                        }
+                        syncedCount += toUpload.size
+                    } else {
+                        return SyncResult.Error("同步账户失败: ${body?.message}")
+                    }
+                } else if (response.code() == 409) {
+                    return handleAccountConflict(toUpload)
+                } else {
+                    return SyncResult.Error("服务器返回错误: ${response.code()}")
+                }
+            }
+
+            // --- 处理待删除 ---
+            if (toDelete.isNotEmpty()) {
+                for (entity in toDelete) {
+                    entity.serverId?.let { serverId ->
+                        val response = accountApiService.deleteAccount(serverId)
+                        if (response.isSuccessful) {
+                            accountDao.delete(entity)
+                            syncedCount++
+                        }
+                    } ?: run {
+                        accountDao.delete(entity)
+                        syncedCount++
+                    }
+                }
+            }
 
             updateSyncMetadata(TABLE_ACCOUNTS)
-            return SyncResult.Success(pendingAccounts.size)
-
+            return SyncResult.Success(syncedCount)
         } catch (e: Exception) {
             updateSyncError(TABLE_ACCOUNTS, e.message)
             return SyncResult.Error("同步账户数据失败: ${e.message}", e)
         }
     }
 
-    /**
-     * 从服务器拉取数据
-     */
-    suspend fun pullFromServer(startDate: Long, endDate: Long): SyncResult<List<TransactionEntity>> {
+    private suspend fun handleAccountConflict(toUpload: List<AccountEntity>): SyncResult<Int> {
+        try {
+            val response = accountApiService.getAccounts()
+            if (response.isSuccessful && response.body()?.code == 200) {
+                val serverAccounts = response.body()?.data ?: emptyList()
+                for (serverAcct in serverAccounts) {
+                    serverAcct.id?.let { serverId ->
+                        val localEntity = accountDao.getByServerId(serverId)
+                        if (localEntity != null) {
+                            if (serverAcct.updatedAt != null &&
+                                localEntity.updatedAt < serverAcct.updatedAt) {
+                                accountDao.update(serverAcct.toEntity().copy(id = localEntity.id))
+                            }
+                        }
+                    }
+                }
+                for (entity in toUpload) {
+                    accountDao.updateSyncStatus(entity.id, SyncStatus.SYNCED)
+                }
+                updateSyncMetadata(TABLE_ACCOUNTS)
+                return SyncResult.Success(toUpload.size)
+            }
+            return SyncResult.Error("账户冲突处理失败")
+        } catch (e: Exception) {
+            return SyncResult.Error("账户冲突处理失败: ${e.message}")
+        }
+    }
+
+    // ========================================================================
+    //  从服务器拉取
+    // ========================================================================
+
+    suspend fun pullTransactionsFromServer(startDate: Long, endDate: Long): SyncResult<List<TransactionEntity>> {
         if (!networkMonitor.isNetworkAvailable()) {
             return SyncResult.Error("网络不可用")
         }
@@ -245,16 +362,19 @@ class SyncManager @Inject constructor(
             if (response.isSuccessful && response.body()?.code == 200) {
                 val serverTransactions = response.body()?.data ?: emptyList()
                 val entities = serverTransactions.map { it.toEntity() }
-                
-                // 合并服务器数据到本地（使用服务器数据覆盖本地数据）
+
                 for (entity in entities) {
-                    val localEntity = transactionDao.getByServerId(entity.serverId ?: 0)
-                    if (localEntity != null) {
-                        // 更新现有记录
-                        transactionDao.update(entity.copy(id = localEntity.id))
-                    } else {
-                        // 插入新记录
-                        transactionDao.insert(entity)
+                    val sid = entity.serverId
+                    if (sid != null) {
+                        val localEntity = transactionDao.getByServerId(sid)
+                        if (localEntity != null) {
+                            // 服务端版本覆盖本地（仅当本地没有待上传的修改）
+                            if (localEntity.syncStatus != SyncStatus.PENDING_UPLOAD) {
+                                transactionDao.update(entity.copy(id = localEntity.id))
+                            }
+                        } else {
+                            transactionDao.insert(entity)
+                        }
                     }
                 }
 
@@ -262,19 +382,19 @@ class SyncManager @Inject constructor(
             } else {
                 return SyncResult.Error("服务器返回错误: ${response.body()?.message}")
             }
-
         } catch (e: Exception) {
             return SyncResult.Error("拉取数据失败: ${e.message}", e)
         }
     }
 
-    /**
-     * 更新同步元数据
-     */
+    // ========================================================================
+    //  同步元数据
+    // ========================================================================
+
     private suspend fun updateSyncMetadata(tableName: String) {
         val now = System.currentTimeMillis()
         val existingMetadata = syncMetadataDao.getByTableName(tableName)
-        
+
         if (existingMetadata != null) {
             syncMetadataDao.updateLastSyncTime(tableName, now)
         } else {
@@ -288,13 +408,10 @@ class SyncManager @Inject constructor(
         }
     }
 
-    /**
-     * 更新同步错误信息
-     */
     private suspend fun updateSyncError(tableName: String, error: String?) {
         val now = System.currentTimeMillis()
         val existingMetadata = syncMetadataDao.getByTableName(tableName)
-        
+
         if (existingMetadata != null) {
             syncMetadataDao.updateSyncError(tableName, error, now)
         } else {
@@ -308,47 +425,105 @@ class SyncManager @Inject constructor(
         }
     }
 
-    /**
-     * 检查是否需要同步
-     */
     fun needsSync(): Boolean {
         return _pendingSyncCount.value > 0
     }
 
-    /**
-     * 手动刷新待同步计数
-     */
     fun refreshPendingCount() {
         updatePendingSyncCount()
     }
 
-    // ========== 扩展函数：实体与DTO转换 ==========
+    // ========================================================================
+    //  实体 <-> DTO 转换
+    // ========================================================================
 
-    private fun TransactionEntity.toDto(): TransactionDto {
+    private fun findServerTransactionForLocal(
+        local: TransactionEntity,
+        serverList: List<TransactionDto>
+    ): TransactionDto? {
+        val localServerId = local.serverId
+        if (!localServerId.isNullOrBlank()) {
+            serverList.firstOrNull { it.id == localServerId }?.let { return it }
+        }
+        // 按时间戳最接近匹配
+        return serverList.minByOrNull { dto ->
+            kotlin.math.abs((dto.createdAt ?: dto.date) - local.createdAt)
+        }
+    }
+
+    private fun findServerAccountForLocal(
+        local: AccountEntity,
+        serverList: List<AccountDto>
+    ): AccountDto? {
+        val localServerId = local.serverId
+        if (!localServerId.isNullOrBlank()) {
+            serverList.firstOrNull { it.id == localServerId }?.let { return it }
+        }
+        return serverList.minByOrNull { dto ->
+            kotlin.math.abs((dto.createdAt ?: 0L) - local.createdAt)
+        }
+    }
+
+    // ---------- Transaction ----------
+
+    private fun TransactionEntity.toSyncDto(): TransactionDto {
         return TransactionDto(
-            id = serverId ?: 0,
+            id = serverId,
             amount = amount,
             type = type.name,
             category = category,
             note = note,
             date = date,
-            createdAt = createdAt
+            accountId = accountId.takeIf { it > 0 },
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            deletedAt = null
         )
     }
 
     private fun TransactionDto.toEntity(): TransactionEntity {
         return TransactionEntity(
-            serverId = id,
+            serverId = id?.takeIf { it.isNotBlank() },
             amount = amount,
-            type = com.example.funnyexpensetracking.data.local.entity.TransactionType.valueOf(type),
+            type = try { TransactionType.valueOf(type) } catch (_: Exception) { TransactionType.EXPENSE },
             category = category,
-            accountId = 0, // TODO: 需要从DTO中获取账户信息
+            accountId = accountId ?: 0,
             note = note,
             date = date,
+            createdAt = createdAt ?: date,
+            updatedAt = updatedAt ?: System.currentTimeMillis(),
+            syncStatus = SyncStatus.SYNCED,
+            lastSyncAt = System.currentTimeMillis()
+        )
+    }
+
+    // ---------- Account ----------
+
+    private fun AccountEntity.toSyncDto(): AccountDto {
+        return AccountDto(
+            id = serverId,
+            name = name,
+            icon = icon,
+            balance = balance,
+            isDefault = isDefault,
+            sortOrder = sortOrder,
             createdAt = createdAt,
+            updatedAt = updatedAt
+        )
+    }
+
+    private fun AccountDto.toEntity(): AccountEntity {
+        return AccountEntity(
+            serverId = id?.takeIf { it.isNotBlank() },
+            name = name,
+            icon = icon,
+            balance = balance,
+            isDefault = isDefault,
+            sortOrder = sortOrder,
+            createdAt = createdAt ?: System.currentTimeMillis(),
+            updatedAt = updatedAt ?: System.currentTimeMillis(),
             syncStatus = SyncStatus.SYNCED,
             lastSyncAt = System.currentTimeMillis()
         )
     }
 }
-

@@ -17,6 +17,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        // 模拟器访问本机后端：10.0.2.2 → 宿主机；真机请改为电脑局域网 IP（与 application.yml 端口一致，默认 8081）
+        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8081/v1/\"")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

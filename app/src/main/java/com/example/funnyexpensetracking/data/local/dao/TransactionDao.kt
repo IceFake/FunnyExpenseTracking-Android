@@ -31,7 +31,7 @@ interface TransactionDao {
     suspend fun getById(id: Long): TransactionEntity?
 
     @Query("SELECT * FROM transactions WHERE serverId = :serverId")
-    suspend fun getByServerId(serverId: Long): TransactionEntity?
+    suspend fun getByServerId(serverId: String): TransactionEntity?
 
     @Query("SELECT * FROM transactions WHERE syncStatus != :status ORDER BY date DESC")
     fun getAllTransactionsExcludeStatus(status: SyncStatus = SyncStatus.PENDING_DELETE): Flow<List<TransactionEntity>>
@@ -116,7 +116,7 @@ interface TransactionDao {
      * 更新服务器ID
      */
     @Query("UPDATE transactions SET serverId = :serverId, syncStatus = :status WHERE id = :localId")
-    suspend fun updateServerId(localId: Long, serverId: Long, status: SyncStatus = SyncStatus.SYNCED)
+    suspend fun updateServerId(localId: Long, serverId: String, status: SyncStatus = SyncStatus.SYNCED)
 
     /**
      * 标记为待删除（软删除）

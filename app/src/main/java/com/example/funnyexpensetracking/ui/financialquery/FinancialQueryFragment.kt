@@ -15,6 +15,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.funnyexpensetracking.MainActivity
 import com.example.funnyexpensetracking.databinding.FragmentFinancialQueryBinding
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -52,6 +53,16 @@ class FinancialQueryFragment : Fragment() {
         setupClickListeners()
         setupInputListeners()
         observeState()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        setBottomNavigationVisible(false)
+    }
+
+    override fun onPause() {
+        setBottomNavigationVisible(true)
+        super.onPause()
     }
 
     private fun setupRecyclerView() {
@@ -229,10 +240,15 @@ class FinancialQueryFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        setBottomNavigationVisible(true)
         super.onDestroyView()
         apiKeyDialog?.dismiss()
         apiKeyDialog = null
         _binding = null
+    }
+
+    private fun setBottomNavigationVisible(visible: Boolean) {
+        (activity as? MainActivity)?.setBottomNavigationVisible(visible)
     }
 }
 

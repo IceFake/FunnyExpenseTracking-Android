@@ -145,7 +145,7 @@ class TransactionRepositoryImpl @Inject constructor(
      * 从服务器拉取数据
      */
     suspend fun pullFromServer(startDate: Long, endDate: Long) {
-        syncManager.pullFromServer(startDate, endDate)
+        syncManager.pullTransactionsFromServer(startDate, endDate)
     }
 
     /**

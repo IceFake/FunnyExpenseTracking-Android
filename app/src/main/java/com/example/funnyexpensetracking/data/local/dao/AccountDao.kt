@@ -27,7 +27,7 @@ interface AccountDao {
     suspend fun getById(id: Long): AccountEntity?
 
     @Query("SELECT * FROM accounts WHERE serverId = :serverId")
-    suspend fun getByServerId(serverId: Long): AccountEntity?
+    suspend fun getByServerId(serverId: String): AccountEntity?
 
     @Query("SELECT * FROM accounts WHERE syncStatus != :excludeStatus ORDER BY sortOrder ASC, createdAt DESC")
     fun getAllAccountsExcludeStatus(excludeStatus: SyncStatus = SyncStatus.PENDING_DELETE): Flow<List<AccountEntity>>
@@ -114,7 +114,7 @@ interface AccountDao {
      * 更新服务器ID
      */
     @Query("UPDATE accounts SET serverId = :serverId, syncStatus = :status WHERE id = :localId")
-    suspend fun updateServerId(localId: Long, serverId: Long, status: SyncStatus = SyncStatus.SYNCED)
+    suspend fun updateServerId(localId: Long, serverId: String, status: SyncStatus = SyncStatus.SYNCED)
 
     /**
      * 标记为待删除（软删除）

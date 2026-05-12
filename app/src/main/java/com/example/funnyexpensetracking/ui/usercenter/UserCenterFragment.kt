@@ -1,11 +1,13 @@
 package com.example.funnyexpensetracking.ui.usercenter
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -15,9 +17,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.funnyexpensetracking.R
+import com.example.funnyexpensetracking.data.local.UserPreferencesManager
+import com.example.funnyexpensetracking.ui.auth.LoginActivity
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
@@ -32,9 +38,15 @@ class UserCenterFragment : Fragment() {
 
     private val viewModel: UserCenterViewModel by viewModels()
 
+    @Inject
+    lateinit var userPreferencesManager: UserPreferencesManager
+
     // Views
     private lateinit var cardExportData: MaterialCardView
     private lateinit var cardImportData: MaterialCardView
+    private lateinit var cardBackendLogin: MaterialCardView
+    private lateinit var tvBackendLoginStatus: TextView
+    private lateinit var btnLogoutBackend: MaterialButton
     private lateinit var cardClearData: MaterialCardView
     private lateinit var progressBar: ProgressBar
 
@@ -65,13 +77,37 @@ class UserCenterFragment : Fragment() {
         initViews(view)
         setupClickListeners()
         observeState()
+        updateBackendLoginUi()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateBackendLoginUi()
     }
 
     private fun initViews(view: View) {
         cardExportData = view.findViewById(R.id.cardExportData)
         cardImportData = view.findViewById(R.id.cardImportData)
+        cardBackendLogin = view.findViewById(R.id.cardBackendLogin)
+        tvBackendLoginStatus = view.findViewById(R.id.tvBackendLoginStatus)
+        btnLogoutBackend = view.findViewById(R.id.btnLogoutBackend)
         cardClearData = view.findViewById(R.id.cardClearData)
         progressBar = view.findViewById(R.id.progressBar)
+    }
+
+    private fun updateBackendLoginUi() {
+        val email = userPreferencesManager.getBackendUserEmail()
+        if (userPreferencesManager.hasBackendSession()) {
+            tvBackendLoginStatus.text = if (email.isNotBlank()) {
+                getString(R.string.backend_login_status_fmt, email)
+            } else {
+                getString(R.string.backend_login_status_no_email)
+            }
+            btnLogoutBackend.visibility = View.VISIBLE
+        } else {
+            tvBackendLoginStatus.text = getString(R.string.backend_login_status_none)
+            btnLogoutBackend.visibility = View.GONE
+        }
     }
 
     private fun setupClickListeners() {
@@ -81,6 +117,32 @@ class UserCenterFragment : Fragment() {
 
         cardImportData.setOnClickListener {
             onImportDataClick()
+        }
+
+        cardBackendLogin.setOnClickListener {
+            startActivity(
+                Intent(requireContext(), LoginActivity::class.java).putExtra(
+                    LoginActivity.EXTRA_FORCE_LOGIN,
+                    true
+                )
+            )
+        }
+
+        btnLogoutBackend.setOnClickListener {
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.logout_backend)
+                .setMessage(R.string.logout_backend_confirm)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    viewModel.logoutBackend()
+                    startActivity(
+                        Intent(requireContext(), LoginActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                    )
+                    requireActivity().finish()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
         }
 
         cardClearData.setOnClickListener {

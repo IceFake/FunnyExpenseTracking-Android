@@ -15,6 +15,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.funnyexpensetracking.MainActivity
 import com.example.funnyexpensetracking.R
 import com.example.funnyexpensetracking.databinding.FragmentAiAnalysisBinding
 import com.example.funnyexpensetracking.domain.model.HabitInsight
@@ -54,6 +55,16 @@ class AIAnalysisFragment : Fragment() {
         setupClickListeners()
         observeState()
         // 不再自动调用AI接口，由ViewModel加载缓存结果展示
+    }
+
+    override fun onResume() {
+        super.onResume()
+        setBottomNavigationVisible(false)
+    }
+
+    override fun onPause() {
+        setBottomNavigationVisible(true)
+        super.onPause()
     }
 
     private fun setupViews() {
@@ -346,7 +357,12 @@ class AIAnalysisFragment : Fragment() {
     override fun onDestroyView() {
         apiKeyDialog?.dismiss()
         apiKeyDialog = null
+        setBottomNavigationVisible(true)
         super.onDestroyView()
         _binding = null
+    }
+
+    private fun setBottomNavigationVisible(visible: Boolean) {
+        (activity as? MainActivity)?.setBottomNavigationVisible(visible)
     }
 }

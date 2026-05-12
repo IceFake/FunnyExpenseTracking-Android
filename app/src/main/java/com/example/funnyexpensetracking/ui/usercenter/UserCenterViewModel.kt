@@ -3,6 +3,7 @@ package com.example.funnyexpensetracking.ui.usercenter
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.funnyexpensetracking.domain.model.BackupData
+import com.example.funnyexpensetracking.domain.repository.AuthRepository
 import com.example.funnyexpensetracking.domain.repository.DataManagementRepository
 import com.example.funnyexpensetracking.domain.usecase.RealtimeAssetCalculator
 import com.google.gson.Gson
@@ -21,7 +22,8 @@ import javax.inject.Inject
 @HiltViewModel
 class UserCenterViewModel @Inject constructor(
     private val dataManagementRepository: DataManagementRepository,
-    private val realtimeAssetCalculator: RealtimeAssetCalculator
+    private val realtimeAssetCalculator: RealtimeAssetCalculator,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val gson: Gson = GsonBuilder()
@@ -117,6 +119,10 @@ class UserCenterViewModel @Inject constructor(
      */
     fun clearExportData() {
         _exportData.value = null
+    }
+
+    fun logoutBackend() {
+        authRepository.logout()
     }
 }
 
