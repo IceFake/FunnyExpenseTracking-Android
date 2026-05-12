@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F5F5">
@@ -13,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:text="用户中心"
+        android:text="@string/user_center_title"
         android:textColor="#333333"
         android:textSize="24sp"
         android:textStyle="bold"
@@ -42,7 +41,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_upload"
-                android:contentDescription="导出数据" />
+                    android:contentDescription="@string/content_desc_export" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -54,14 +53,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="导出数据"
+                    android:text="@string/user_center_export_title"
                     android:textColor="#333333"
                     android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="将所有数据导出为备份文件"
+                    android:text="@string/user_center_export_desc"
                     android:textColor="#999999"
                     android:textSize="12sp" />
 
@@ -72,7 +71,7 @@
                 android:layout_height="24dp"
                 android:src="@drawable/ic_arrow_right"
                 android:rotation="0"
-                android:contentDescription="更多" />
+                    android:contentDescription="@string/content_desc_more" />
 
         </LinearLayout>
 
@@ -100,7 +99,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_save"
-                android:contentDescription="导入数据" />
+                    android:contentDescription="@string/content_desc_import" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -112,14 +111,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="导入数据"
+                    android:text="@string/user_center_import_title"
                     android:textColor="#333333"
                     android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="从备份文件导入数据（增量合并）"
+                    android:text="@string/user_center_import_desc"
                     android:textColor="#999999"
                     android:textSize="12sp" />
 
@@ -130,7 +129,7 @@
                 android:layout_height="24dp"
                 android:src="@drawable/ic_arrow_right"
                 android:rotation="0"
-                android:contentDescription="更多" />
+                    android:contentDescription="@string/content_desc_more" />
 
         </LinearLayout>
 
@@ -158,7 +157,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_upload"
-                android:contentDescription="后端登录" />
+                    android:contentDescription="@string/content_desc_backend" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -170,7 +169,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="连接后端（登录）"
+                    android:text="@string/user_center_backend_title"
                     android:textColor="#333333"
                     android:textSize="16sp" />
 
@@ -178,7 +177,7 @@
                     android:id="@+id/tvBackendLoginStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="使用邮箱登录后端以同步数据、股票与 AI"
+                    android:text="@string/user_center_backend_desc"
                     android:textColor="#999999"
                     android:textSize="12sp" />
 
@@ -188,7 +187,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_arrow_right"
-                android:contentDescription="更多" />
+                    android:contentDescription="@string/content_desc_more" />
 
         </LinearLayout>
 
@@ -229,7 +228,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_delete"
-                android:contentDescription="清除数据" />
+                    android:contentDescription="@string/content_desc_clear" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -241,14 +240,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="清除所有数据"
+                    android:text="@string/user_center_clear_title"
                     android:textColor="#FF5252"
                     android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="删除本地所有数据（不可恢复）"
+                    android:text="@string/user_center_clear_desc"
                     android:textColor="#999999"
                     android:textSize="12sp" />
 
@@ -259,7 +258,7 @@
                 android:layout_height="24dp"
                 android:src="@drawable/ic_arrow_right"
                 android:rotation="0"
-                android:contentDescription="更多" />
+                    android:contentDescription="@string/content_desc_more" />
 
         </LinearLayout>
 

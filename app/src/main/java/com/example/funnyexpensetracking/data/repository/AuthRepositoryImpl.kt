@@ -1,6 +1,7 @@
 package com.example.funnyexpensetracking.data.repository
 
 import com.example.funnyexpensetracking.data.local.UserPreferencesManager
+import com.example.funnyexpensetracking.config.ApiEnvironmentConfig
 import com.example.funnyexpensetracking.data.remote.api.AuthApiService
 import com.example.funnyexpensetracking.data.remote.dto.LoginRequestDto
 import com.example.funnyexpensetracking.data.remote.dto.LogoutRequestDto
@@ -77,7 +78,13 @@ class AuthRepositoryImpl @Inject constructor(
 
     private fun Throwable.toUserMessage(defaultMessage: String): String {
         return when (this) {
-            is IOException -> "网络连接失败，请检查网络后重试"
+            is IOException -> {
+                if (ApiEnvironmentConfig.IS_TEST_ENV) {
+                    "本地测试后端无法连接，请确认服务已启动且可访问 10.0.2.2:8081"
+                } else {
+                    "网络连接失败，请检查网络后重试"
+                }
+            }
             is HttpException -> "服务器错误(${code()})，请稍后重试"
             else -> message?.takeIf { it.isNotBlank() } ?: defaultMessage
         }

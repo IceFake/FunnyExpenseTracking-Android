@@ -1,6 +1,7 @@
 package com.example.funnyexpensetracking.di
 
 import com.example.funnyexpensetracking.BuildConfig
+import com.example.funnyexpensetracking.config.ApiEnvironmentConfig
 import com.example.funnyexpensetracking.data.remote.AuthInterceptor
 import com.example.funnyexpensetracking.data.remote.api.*
 import com.google.gson.Gson
@@ -28,8 +29,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private val BASE_URL: String
-        get() = BuildConfig.API_BASE_URL
     private const val YAHOO_FINANCE_BASE_URL = "https://query1.finance.yahoo.com/"
     private const val SINA_FINANCE_BASE_URL = "https://hq.sinajs.cn/"
     private const val DEEPSEEK_BASE_URL = "https://api.deepseek.com/"
@@ -54,13 +53,25 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @Named("backendBaseUrl")
+    fun provideBackendBaseUrl(): String {
+        return if (ApiEnvironmentConfig.IS_TEST_ENV) {
+            BuildConfig.LOCAL_API_BASE_URL
+        } else {
+            BuildConfig.API_BASE_URL
+        }
+    }
+
+    @Provides
+    @Singleton
     @Named("authBare")
     fun provideAuthBareRetrofit(
         @Named("authBareClient") okHttpClient: OkHttpClient,
-        @Named("lenientGson") gson: Gson
+        @Named("lenientGson") gson: Gson,
+        @Named("backendBaseUrl") baseUrl: String
     ): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
@@ -126,9 +137,13 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("default")
-    fun provideRetrofit(okHttpClient: OkHttpClient, @Named("lenientGson") gson: Gson): Retrofit {
+    fun provideRetrofit(
+        okHttpClient: OkHttpClient,
+        @Named("lenientGson") gson: Gson,
+        @Named("backendBaseUrl") baseUrl: String
+    ): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()

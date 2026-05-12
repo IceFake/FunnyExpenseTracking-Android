@@ -44,6 +44,7 @@ class UserCenterFragment : Fragment() {
     // Views
     private lateinit var cardExportData: MaterialCardView
     private lateinit var cardImportData: MaterialCardView
+    // API 环境切换相关 UI 已移除，环境由配置/偏好管理，不在用户界面暴露
     private lateinit var cardBackendLogin: MaterialCardView
     private lateinit var tvBackendLoginStatus: TextView
     private lateinit var btnLogoutBackend: MaterialButton
@@ -88,11 +89,13 @@ class UserCenterFragment : Fragment() {
     private fun initViews(view: View) {
         cardExportData = view.findViewById(R.id.cardExportData)
         cardImportData = view.findViewById(R.id.cardImportData)
+        // 不对 API 环境相关 View 进行查找（已从 UI 移除）
         cardBackendLogin = view.findViewById(R.id.cardBackendLogin)
         tvBackendLoginStatus = view.findViewById(R.id.tvBackendLoginStatus)
         btnLogoutBackend = view.findViewById(R.id.btnLogoutBackend)
         cardClearData = view.findViewById(R.id.cardClearData)
         progressBar = view.findViewById(R.id.progressBar)
+        // API 环境切换已从 UI 移除
     }
 
     private fun updateBackendLoginUi() {
@@ -110,6 +113,8 @@ class UserCenterFragment : Fragment() {
         }
     }
 
+    // API 环境 UI 已移除：不再在用户界面中提供环境切换
+
     private fun setupClickListeners() {
         cardExportData.setOnClickListener {
             onExportDataClick()
@@ -118,6 +123,7 @@ class UserCenterFragment : Fragment() {
         cardImportData.setOnClickListener {
             onImportDataClick()
         }
+
 
         cardBackendLogin.setOnClickListener {
             startActivity(
