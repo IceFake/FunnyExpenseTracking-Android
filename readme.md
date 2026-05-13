@@ -704,3 +704,28 @@ app/src/main/java/com/example/funnyexpensetracking/
 | JDK | 11+ |
 | Android SDK | compileSdk 36, minSdk 24 |
 | Gradle | 8.10.1（Kotlin DSL）|
+
+---
+
+### API 环境切换（已更新）
+
+- 环境现在由代码常量控制：`app/src/main/java/com/example/funnyexpensetracking/config/ApiEnvironmentConfig.kt` 中的 `ApiEnvironmentConfig.IS_TEST_ENV`。
+  - 将其设为 `true` 表示使用本地/测试后端（默认：`http://10.0.2.2:8081/`），设为 `false` 表示使用线上后端（`BuildConfig.API_BASE_URL`）。
+  - UI 已移除环境切换开关，不再通过界面或 SharedPreferences 切换环境，避免误操作。
+
+### 本地开发与测试指南（网络相关）
+
+- 若在 Android 模拟器上使用本地后端，请确保本地服务在宿主机上已启动并监听相应端口（默认 8081）。模拟器中访问宿主机请使用 `10.0.2.2`。
+- 为了允许模拟器/调试变体访问明文 HTTP，本项目在调试/测试时已允许明文流量（`android:usesCleartextTraffic="true"`）。
+  - 注意：请不要在 release/生产构建中开启全局明文流量。推荐为 debug 变体单独配置 `network_security_config`，仅允许 `10.0.2.2` 或局域网 IP 的明文访问。
+- 真机测试：`10.0.2.2` 在真机上不可用。若在真机测试，请将 `ApiEnvironmentConfig.IS_TEST_ENV` 指向局域网内可访问的宿主机 IP（如 `192.168.x.x`），并确保防火墙/路由允许访问。
+- 登录失败提示：当 `IS_TEST_ENV = true` 且本地后端未启动时，登录会提示 "本地后端不可达"（更明确的网络错误提示以便排查）。确认本地后端启动并返回正确的 API 响应。
+
+### 推荐实践
+
+- 将 `ApiEnvironmentConfig.IS_TEST_ENV` 作为开发者本地开关，仅在开发/CI 环境修改；不要在生产构建中将其设为 `true`。
+- 更稳妥的做法是：通过 Gradle buildType（debug/release）或 CI 参数来注入环境配置，而不是手动修改源码常量。
+- 如果需要我可以：
+  1. 添加 `network_security_config.xml` 并只在 debug 变体启用明文 HTTP；
+  2. 将 `ApiEnvironmentConfig` 替换为基于 BuildConfig 的常量（由 Gradle 在不同变体中注入）。
+
