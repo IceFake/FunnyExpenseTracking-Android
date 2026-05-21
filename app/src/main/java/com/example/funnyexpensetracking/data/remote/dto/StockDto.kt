@@ -33,11 +33,3 @@ data class BatchQuoteResponse(
     @SerializedName("quotes") val quotes: List<StockQuoteDto>
 )
 
-/**
- * 股票搜索结果
- */
-data class StockSearchResult(
-    @SerializedName("symbol") val symbol: String,
-    @SerializedName("name") val name: String,
-    @SerializedName("exchange") val exchange: String? = null
-)

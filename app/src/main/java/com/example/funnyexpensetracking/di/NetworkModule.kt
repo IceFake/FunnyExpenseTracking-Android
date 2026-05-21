@@ -17,7 +17,6 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
@@ -29,8 +28,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val YAHOO_FINANCE_BASE_URL = "https://query1.finance.yahoo.com/"
-    private const val SINA_FINANCE_BASE_URL = "https://hq.sinajs.cn/"
     private const val DEEPSEEK_BASE_URL = "https://api.deepseek.com/"
 
     /**
@@ -103,37 +100,6 @@ object NetworkModule {
             .build()
     }
 
-    /**
-     * Yahoo Finance API 专用 OkHttpClient
-     * 添加必要的请求头以避免被拒绝
-     */
-    @Provides
-    @Singleton
-    @Named("yahooFinanceClient")
-    fun provideYahooFinanceOkHttpClient(): OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
-
-        // 添加 Yahoo Finance 需要的请求头
-        val headerInterceptor = Interceptor { chain ->
-            val request = chain.request().newBuilder()
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .addHeader("Accept", "application/json")
-                .addHeader("Accept-Language", "en-US,en;q=0.9")
-                .build()
-            chain.proceed(request)
-        }
-
-        return OkHttpClient.Builder()
-            .addInterceptor(headerInterceptor)
-            .addInterceptor(loggingInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .build()
-    }
-
     @Provides
     @Singleton
     @Named("default")
@@ -149,72 +115,15 @@ object NetworkModule {
             .build()
     }
 
-    @Provides
-    @Singleton
-    @Named("yahooFinance")
-    fun provideYahooFinanceRetrofit(
-        @Named("yahooFinanceClient") okHttpClient: OkHttpClient,
-        gson: Gson
-    ): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(YAHOO_FINANCE_BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build()
-    }
-
-    /**
-     * 新浪财经 API 专用 OkHttpClient
-     */
-    @Provides
-    @Singleton
-    @Named("sinaFinanceClient")
-    fun provideSinaFinanceOkHttpClient(): OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
-
-        // 添加新浪财经需要的请求头
-        val headerInterceptor = Interceptor { chain ->
-            val request = chain.request().newBuilder()
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .addHeader("Referer", "https://finance.sina.com.cn/")
-                .addHeader("Accept", "*/*")
-                .build()
-            chain.proceed(request)
-        }
-
-        return OkHttpClient.Builder()
-            .addInterceptor(headerInterceptor)
-            .addInterceptor(loggingInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .build()
-    }
-
-    @Provides
-    @Singleton
-    @Named("sinaFinance")
-    fun provideSinaFinanceRetrofit(@Named("sinaFinanceClient") okHttpClient: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(SINA_FINANCE_BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(ScalarsConverterFactory.create())
-            .build()
-    }
+    // ==================== DeepSeek AI ====================
 
     /**
      * DeepSeek API 专用 OkHttpClient
-     * 不添加日志拦截器以避免泄露API密钥
-     * 使用更长的超时时间（AI生成可能较慢）
-     * 添加重试拦截器处理瞬时错误（429/500/503）
      */
     @Provides
     @Singleton
     @Named("deepSeekClient")
     fun provideDeepSeekOkHttpClient(): OkHttpClient {
-        // 重试拦截器：处理限流和服务端瞬时错误
         val retryInterceptor = Interceptor { chain ->
             var response = chain.proceed(chain.request())
             var tryCount = 0
@@ -239,7 +148,7 @@ object NetworkModule {
         return OkHttpClient.Builder()
             .addInterceptor(retryInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)  // AI生成可能需要较长时间
+            .readTimeout(120, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
@@ -257,6 +166,14 @@ object NetworkModule {
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
+
+    @Provides
+    @Singleton
+    fun provideDeepSeekApiService(@Named("deepSeek") retrofit: Retrofit): DeepSeekApiService {
+        return retrofit.create(DeepSeekApiService::class.java)
+    }
+
+    // ==================== 后端 API Services ====================
 
     @Provides
     @Singleton
@@ -290,27 +207,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideYahooFinanceApiService(@Named("yahooFinance") retrofit: Retrofit): YahooFinanceApiService {
-        return retrofit.create(YahooFinanceApiService::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideSinaFinanceApiService(@Named("sinaFinance") retrofit: Retrofit): SinaFinanceApiService {
-        return retrofit.create(SinaFinanceApiService::class.java)
-    }
-
-    @Provides
-    @Singleton
     fun provideAccountApiService(@Named("default") retrofit: Retrofit): AccountApiService {
         return retrofit.create(AccountApiService::class.java)
     }
 
-    @Provides
-    @Singleton
-    fun provideDeepSeekApiService(@Named("deepSeek") retrofit: Retrofit): DeepSeekApiService {
-        return retrofit.create(DeepSeekApiService::class.java)
-    }
+    // ==================== Gson ====================
 
     @Provides
     @Singleton
@@ -328,4 +229,3 @@ object NetworkModule {
             .create()
     }
 }
-

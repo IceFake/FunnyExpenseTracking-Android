@@ -170,6 +170,35 @@
                 android:textStyle="bold"
                 android:textColor="@color/black" />
 
+            <!-- 同步状态指示器 -->
+            <LinearLayout
+                android:id="@+id/llSyncStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/bg_sync_status"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp">
+
+                <ImageView
+                    android:id="@+id/ivSyncIcon"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_sync"
+                    app:tint="#666666" />
+
+                <TextView
+                    android:id="@+id/tvSyncStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="待同步 0"
+                    android:textSize="12sp"
+                    android:textColor="#666666" />
+            </LinearLayout>
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnFixedIncome"
                 style="?attr/materialButtonOutlinedStyle"
@@ -242,4 +271,3 @@
         app:tint="@android:color/white" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
-

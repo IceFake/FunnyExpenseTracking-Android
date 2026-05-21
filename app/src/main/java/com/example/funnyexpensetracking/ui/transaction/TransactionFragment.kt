@@ -76,6 +76,12 @@ class TransactionFragment : Fragment() {
         binding.btnFixedIncome.setOnClickListener {
             navigateToStatistics()
         }
+
+        binding.llSyncStatus.setOnClickListener {
+            if (!viewModel.uiState.value.isSyncing) {
+                viewModel.manualSync()
+            }
+        }
     }
 
     private fun navigateToStatistics() {
@@ -112,6 +118,9 @@ class TransactionFragment : Fragment() {
                     // 更新列表
                     transactionAdapter.submitList(state.dailyTransactions)
 
+                    // 更新同步状态
+                    updateSyncStatusUI(state.isSyncing, state.pendingSyncCount)
+
                     // 显示/隐藏空状态
                     if (state.dailyTransactions.isEmpty()) {
                         binding.rvTransactions.visibility = View.GONE
@@ -136,6 +145,34 @@ class TransactionFragment : Fragment() {
                         showAddFixedIncomeDialog()
                     }
                 }
+            }
+        }
+    }
+
+    private fun updateSyncStatusUI(isSyncing: Boolean, pendingCount: Int) {
+        if (isSyncing) {
+            binding.tvSyncStatus.text = "正在同步..."
+            binding.tvSyncStatus.setTextColor(requireContext().getColor(com.google.android.material.R.color.design_default_color_primary))
+            binding.ivSyncIcon.setColorFilter(requireContext().getColor(com.google.android.material.R.color.design_default_color_primary))
+
+            // 简单的旋转动画
+            binding.ivSyncIcon.animate().rotationBy(360f).setDuration(1000).withEndAction {
+                if (viewModel.uiState.value.isSyncing) {
+                    updateSyncStatusUI(true, pendingCount)
+                }
+            }.start()
+        } else {
+            binding.ivSyncIcon.animate().cancel()
+            binding.ivSyncIcon.rotation = 0f
+
+            if (pendingCount > 0) {
+                binding.tvSyncStatus.text = "待同步 $pendingCount"
+                binding.tvSyncStatus.setTextColor(requireContext().getColor(android.R.color.holo_orange_dark))
+                binding.ivSyncIcon.setColorFilter(requireContext().getColor(android.R.color.holo_orange_dark))
+            } else {
+                binding.tvSyncStatus.text = "同步完成"
+                binding.tvSyncStatus.setTextColor(requireContext().getColor(android.R.color.holo_green_dark))
+                binding.ivSyncIcon.setColorFilter(requireContext().getColor(android.R.color.holo_green_dark))
             }
         }
     }
@@ -343,4 +380,3 @@ class TransactionFragment : Fragment() {
         _binding = null
     }
 }
-

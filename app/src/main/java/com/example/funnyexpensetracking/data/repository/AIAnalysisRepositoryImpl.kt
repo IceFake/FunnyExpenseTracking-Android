@@ -126,7 +126,7 @@ class AIAnalysisRepositoryImpl @Inject constructor(
 
     private fun com.example.funnyexpensetracking.data.local.entity.TransactionEntity.toAnalysisWireDto(): TransactionDto {
         return TransactionDto(
-            id = serverId?.toLongOrNull() ?: id,
+            id = serverId ?: id.toString(),
             amount = amount,
             type = type.name,
             category = category,

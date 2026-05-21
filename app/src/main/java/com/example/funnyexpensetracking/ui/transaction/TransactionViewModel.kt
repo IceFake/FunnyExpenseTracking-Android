@@ -108,6 +108,19 @@ class TransactionViewModel @Inject constructor(
     }
 
     /**
+     * 手动同步
+     */
+    fun manualSync() {
+        if (!currentState().isSyncing && !currentState().isOffline) {
+            viewModelScope.launch {
+                syncManager.syncAll()
+            }
+        } else if (currentState().isOffline) {
+            sendEvent(TransactionUiEvent.ShowMessage("当前网络不可用，无法同步"))
+        }
+    }
+
+    /**
      * 获取用户上次选择的账户ID
      */
     fun getLastSelectedAccountId(): Long {
@@ -413,4 +426,3 @@ class TransactionViewModel @Inject constructor(
 
 
 }
-
