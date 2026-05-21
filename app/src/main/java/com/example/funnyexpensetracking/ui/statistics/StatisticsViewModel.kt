@@ -50,11 +50,22 @@ class StatisticsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            // 获取上月数据用于环比
+            var prevYear = year
+            var prevMonth = month - 1
+            if (prevMonth < 1) {
+                prevMonth = 12
+                prevYear--
+            }
+            val prevResult = statisticsRepository.getMonthlyStatistics(prevYear, prevMonth)
+
             when (val result = statisticsRepository.getMonthlyStatistics(year, month)) {
                 is Resource.Success -> {
                     updateState {
                         copy(
                             currentStatistics = result.data,
+                            previousTotalExpense = prevResult.data?.totalExpense,
+                            previousTotalIncome = prevResult.data?.totalIncome,
                             categoryStats = result.data?.categoryBreakdown ?: emptyList(),
                             chartUrl = result.data?.chartUrl,
                             loadingState = LoadingState.SUCCESS
@@ -188,4 +199,3 @@ class StatisticsViewModel @Inject constructor(
         }
     }
 }
-

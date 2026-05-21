@@ -1126,10 +1126,4 @@ class SyncManager @Inject constructor(
     private fun toEntity(dto: AccountDto): AccountEntity { return AccountEntity(serverId = dto.id?.takeIf { it > 0 }?.toString(), name = dto.name, icon = dto.icon, balance = dto.balance, isDefault = dto.isDefault, sortOrder = dto.sortOrder, createdAt = dto.createdAt ?: System.currentTimeMillis(), updatedAt = dto.updatedAt ?: System.currentTimeMillis(), syncStatus = SyncStatus.SYNCED, lastSyncAt = System.currentTimeMillis()) }
 }
 ```
-```
-
-上述实现保证了数据层在离线场景、并发修改与网络不稳定条件下仍可维持一致性与可恢复性，也为后端的最终合并与冲突处理提供了基础。
-
-参考与说明
-文中示例代码均为摘录性质，目的在于说明各模块的核心职责与实现思路。整体示例遵循仓库中既有的 MVVM 与 Clean Architecture 约定，相关符号与文件路径可参照仓库源码，例如 `app/src/main/java/com/example/funnyexpensetracking/ui/transaction/TransactionViewModel.kt`、`domain/usecase/RealtimeAssetCalculator.kt` 以及 `app/src/main/java/com/example/funnyexpensetracking/config/ApiEnvironmentConfig.kt`。如需进一步扩展为可直接编译的完整类，可继续补充上下文与依赖注入细节。
 

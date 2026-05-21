@@ -38,7 +38,24 @@ class AuthRepositoryImpl @Inject constructor(
                 data.user?.email?.let { userPreferencesManager.saveBackendUserEmail(it) }
                 Result.success(Unit)
             } else {
-                Result.failure(Exception(body?.message ?: response.message() ?: "登录失败"))
+                var errorMessage = body?.message
+                if (errorMessage.isNullOrBlank()) {
+                    val errorString = response.errorBody()?.string()
+                    if (!errorString.isNullOrBlank()) {
+                        try {
+                            val errorJson = org.json.JSONObject(errorString)
+                            errorMessage = errorJson.optString("message").takeIf { it.isNotBlank() }
+                        } catch (ignore: Exception) {}
+                    }
+                }
+                
+                // 拦截常见的 Spring Security 报错信息或相关认证状态码
+                if (response.code() == 401 || response.code() == 403 || 
+                    errorMessage?.contains("Bad credential", ignoreCase = true) == true) {
+                    return Result.failure(Exception("邮箱不存在或密码错误"))
+                }
+                
+                Result.failure(Exception(errorMessage ?: response.message() ?: "登录失败"))
             }
         } catch (e: Exception) {
             Result.failure(Exception(e.toUserMessage("登录失败"), e))
@@ -56,7 +73,22 @@ class AuthRepositoryImpl @Inject constructor(
                 body.data?.email?.let { userPreferencesManager.saveBackendUserEmail(it) }
                 Result.success(Unit)
             } else {
-                Result.failure(Exception(body?.message ?: response.message() ?: "注册失败"))
+                if (response.code() == 401) {
+                    return Result.failure(Exception("邮箱不存在或密码错误"))
+                }
+                var errorMessage = body?.message
+                if (errorMessage.isNullOrBlank()) {
+                    val errorString = response.errorBody()?.string()
+                    if (!errorString.isNullOrBlank()) {
+                        try {
+                            val errorJson = org.json.JSONObject(errorString)
+                            errorMessage = errorJson.optString("message").takeIf { it.isNotBlank() }
+                        } catch (e: Exception) {
+                            // Ignore parsing error
+                        }
+                    }
+                }
+                Result.failure(Exception(errorMessage ?: response.message() ?: "注册失败"))
             }
         } catch (e: Exception) {
             Result.failure(Exception(e.toUserMessage("注册失败"), e))
@@ -85,8 +117,18 @@ class AuthRepositoryImpl @Inject constructor(
                     "网络连接失败，请检查网络后重试"
                 }
             }
-            is HttpException -> "服务器错误(${code()})，请稍后重试"
-            else -> message?.takeIf { it.isNotBlank() } ?: defaultMessage
+            is HttpException -> {
+                if (code() == 401 || code() == 403) "邮箱不存在或密码错误"
+                else "服务器错误(${code()})，请稍后重试"
+            }
+            else -> {
+                val msg = message
+                if (msg?.contains("Bad credential", ignoreCase = true) == true) {
+                    "邮箱不存在或密码错误"
+                } else {
+                    msg?.takeIf { it.isNotBlank() } ?: defaultMessage
+                }
+            }
         }
     }
 }

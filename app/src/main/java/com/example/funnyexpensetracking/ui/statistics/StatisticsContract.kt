@@ -13,6 +13,8 @@ import com.example.funnyexpensetracking.ui.common.ErrorState
  */
 data class StatisticsUiState(
     val currentStatistics: Statistics? = null,
+    val previousTotalExpense: Double? = null,
+    val previousTotalIncome: Double? = null,
     val categoryStats: List<CategoryStat> = emptyList(),
     val trendStatistics: TrendStatistics? = null,
     val selectedYear: Int = 0,

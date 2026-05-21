@@ -16,6 +16,7 @@ import com.example.funnyexpensetracking.MainActivity
 import com.example.funnyexpensetracking.R
 import com.example.funnyexpensetracking.databinding.FragmentStatisticsBinding
 import com.example.funnyexpensetracking.domain.model.CategoryStat
+import com.example.funnyexpensetracking.domain.model.DailyTrend
 import com.example.funnyexpensetracking.domain.model.TransactionType
 import com.example.funnyexpensetracking.ui.aianalysis.AIAnalysisFragment
 import com.example.funnyexpensetracking.ui.financialquery.FinancialQueryFragment
@@ -23,6 +24,11 @@ import com.example.funnyexpensetracking.ui.common.LoadingState
 import com.example.funnyexpensetracking.util.CurrencyUtil
 import com.github.mikephil.charting.animation.Easing
 import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
@@ -74,6 +80,37 @@ class StatisticsFragment : Fragment() {
         Color.parseColor("#1DE9B6"), // 蓝绿
     )
 
+    private fun setupLineChart(lineChart: LineChart) {
+        lineChart.apply {
+            description.isEnabled = false
+            setTouchEnabled(true)
+            isDragEnabled = true
+            setScaleEnabled(false)
+            setPinchZoom(false)
+            setDrawGridBackground(false)
+
+            axisRight.isEnabled = false
+            axisLeft.apply {
+                textColor = Color.parseColor("#999999")
+                gridColor = Color.parseColor("#EEEEEE")
+                enableGridDashedLine(10f, 10f, 0f)
+            }
+
+            xAxis.apply {
+                position = XAxis.XAxisPosition.BOTTOM
+                textColor = Color.parseColor("#999999")
+                setDrawGridLines(false)
+                granularity = 1f
+            }
+
+            legend.apply {
+                textColor = Color.parseColor("#666666")
+                textSize = 12f
+                form = com.github.mikephil.charting.components.Legend.LegendForm.LINE
+            }
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -118,6 +155,9 @@ class StatisticsFragment : Fragment() {
         // 设置环状图
         setupPieChart(binding.pieChartExpense)
         setupPieChart(binding.pieChartIncome)
+
+        // 设置折线图
+        setupLineChart(binding.lineChartTrend)
 
         // 设置Tab切换
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -234,6 +274,40 @@ class StatisticsFragment : Fragment() {
                             } else {
                                 binding.tvBalance.setTextColor(requireContext().getColor(android.R.color.holo_red_light))
                             }
+
+                            // 环比计算显示
+                            if (state.isMonthlyView) {
+                                val curExpense = stats.totalExpense
+                                val prevExpense = state.previousTotalExpense
+                                if (prevExpense != null && prevExpense > 0) {
+                                    val percent = ((curExpense - prevExpense) / prevExpense) * 100
+                                    val sign = if (percent > 0) "+" else ""
+                                    binding.tvMoMExpense.text = "支出环比: $sign${String.format("%.1f", percent)}%"
+                                } else {
+                                    binding.tvMoMExpense.text = "支出环比: --"
+                                }
+
+                                val curIncome = stats.totalIncome
+                                val prevIncome = state.previousTotalIncome
+                                if (prevIncome != null && prevIncome > 0) {
+                                    val percent = ((curIncome - prevIncome) / prevIncome) * 100
+                                    val sign = if (percent > 0) "+" else ""
+                                    binding.tvMoMIncome.text = "收入环比: $sign${String.format("%.1f", percent)}%"
+                                } else {
+                                    binding.tvMoMIncome.text = "收入环比: --"
+                                }
+                            } else {
+                                binding.tvMoMExpense.text = ""
+                                binding.tvMoMIncome.text = ""
+                            }
+                        }
+
+                        // 更新折线图
+                        if (state.currentStatistics?.dailyTrends.isNullOrEmpty()) {
+                            binding.cardTrendChart.visibility = View.GONE
+                        } else {
+                            binding.cardTrendChart.visibility = View.VISIBLE
+                            updateLineChart(binding.lineChartTrend, state.currentStatistics!!.dailyTrends)
                         }
 
                         // 更新分类统计图表
@@ -243,17 +317,22 @@ class StatisticsFragment : Fragment() {
                         when (state.loadingState) {
                             LoadingState.LOADING -> {
                                 binding.progressBar.visibility = View.VISIBLE
+                                binding.cardTrendChart.visibility = View.GONE
                                 binding.cardExpenseChart.visibility = View.GONE
                                 binding.cardIncomeChart.visibility = View.GONE
                                 binding.emptyView.visibility = View.GONE
                             }
                             LoadingState.SUCCESS -> {
                                 binding.progressBar.visibility = View.GONE
-                                if (state.categoryStats.isEmpty()) {
+                                if (state.categoryStats.isEmpty() && state.currentStatistics?.dailyTrends.isNullOrEmpty()) {
+                                    binding.cardTrendChart.visibility = View.GONE
                                     binding.cardExpenseChart.visibility = View.GONE
                                     binding.cardIncomeChart.visibility = View.GONE
                                     binding.emptyView.visibility = View.VISIBLE
                                 } else {
+                                    if (!state.currentStatistics?.dailyTrends.isNullOrEmpty()) {
+                                        binding.cardTrendChart.visibility = View.VISIBLE
+                                    }
                                     binding.cardExpenseChart.visibility = View.VISIBLE
                                     binding.cardIncomeChart.visibility = View.VISIBLE
                                     binding.emptyView.visibility = View.GONE
@@ -282,6 +361,44 @@ class StatisticsFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun updateLineChart(lineChart: LineChart, dailyTrends: List<DailyTrend>) {
+        if (dailyTrends.isEmpty()) {
+            lineChart.clear()
+            return
+        }
+
+        val expenseEntries = ArrayList<Entry>()
+        val incomeEntries = ArrayList<Entry>()
+
+        dailyTrends.forEach {
+            expenseEntries.add(Entry(it.day.toFloat(), it.expense.toFloat()))
+            incomeEntries.add(Entry(it.day.toFloat(), it.income.toFloat()))
+        }
+
+        val expenseDataSet = LineDataSet(expenseEntries, "支出").apply {
+            color = Color.parseColor("#FF5722")
+            setCircleColor(Color.parseColor("#FF5722"))
+            lineWidth = 2f
+            circleRadius = 3f
+            setDrawValues(false)
+            mode = LineDataSet.Mode.HORIZONTAL_BEZIER
+        }
+
+        val incomeDataSet = LineDataSet(incomeEntries, "收入").apply {
+            color = Color.parseColor("#4CAF50")
+            setCircleColor(Color.parseColor("#4CAF50"))
+            lineWidth = 2f
+            circleRadius = 3f
+            setDrawValues(false)
+            mode = LineDataSet.Mode.HORIZONTAL_BEZIER
+        }
+
+        val lineData = LineData(expenseDataSet, incomeDataSet)
+        lineChart.data = lineData
+        lineChart.animateX(1000, Easing.EaseInOutQuad)
+        lineChart.invalidate()
     }
 
     private fun updateCategoryCharts(categoryStats: List<CategoryStat>) {

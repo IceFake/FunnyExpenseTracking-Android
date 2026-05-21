@@ -237,6 +237,29 @@ class StatisticsRepositoryImpl @Inject constructor(
             // 按金额排序
             val sortedBreakdown = categoryBreakdown.sortedByDescending { it.amount }
 
+            // 每日趋势统计
+            val dailyTrends = mutableListOf<DailyTrend>()
+            val daysInMonth = calendar.apply { timeInMillis = endDate }.get(Calendar.DAY_OF_MONTH)
+            val cal = Calendar.getInstance()
+            for (day in 1..daysInMonth) {
+                val dayStart = Calendar.getInstance().apply {
+                    timeInMillis = startDate
+                    set(Calendar.DAY_OF_MONTH, day)
+                }.timeInMillis
+
+                val dayEnd = Calendar.getInstance().apply {
+                    timeInMillis = dayStart
+                    add(Calendar.DAY_OF_MONTH, 1)
+                    add(Calendar.MILLISECOND, -1)
+                }.timeInMillis
+
+                val dayTransactions = transactions.filter { it.date in dayStart..dayEnd }
+                val dayIncome = dayTransactions.filter { it.type == com.example.funnyexpensetracking.data.local.entity.TransactionType.INCOME }.sumOf { it.amount }
+                val dayExpense = dayTransactions.filter { it.type == com.example.funnyexpensetracking.data.local.entity.TransactionType.EXPENSE }.sumOf { it.amount }
+
+                dailyTrends.add(DailyTrend(day, dayIncome, dayExpense))
+            }
+
             Resource.Success(
                 Statistics(
                     period = StatisticsPeriod.MONTHLY,
@@ -246,6 +269,7 @@ class StatisticsRepositoryImpl @Inject constructor(
                     totalExpense = totalExpense,
                     netIncome = totalIncome - totalExpense,
                     categoryBreakdown = sortedBreakdown,
+                    dailyTrends = dailyTrends,
                     chartUrl = null
                 )
             )
@@ -329,6 +353,7 @@ class StatisticsRepositoryImpl @Inject constructor(
                     totalExpense = totalExpense,
                     netIncome = totalIncome - totalExpense,
                     categoryBreakdown = sortedBreakdown,
+                    dailyTrends = emptyList(),
                     chartUrl = null
                 )
             )
@@ -337,4 +362,3 @@ class StatisticsRepositoryImpl @Inject constructor(
         }
     }
 }
-

@@ -27,14 +27,27 @@ class LoginViewModel @Inject constructor(
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     fun login(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _uiState.value = LoginUiState.Error("请输入邮箱和密码")
+        val trimmedEmail = email.trim()
+        if (trimmedEmail.isBlank()) {
+            _uiState.value = LoginUiState.Error("请输入邮箱")
+            return
+        }
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
+            _uiState.value = LoginUiState.Error("邮箱格式不正确")
+            return
+        }
+        if (password.isBlank()) {
+            _uiState.value = LoginUiState.Error("请输入密码")
+            return
+        }
+        if (password.length < 6) {
+            _uiState.value = LoginUiState.Error("密码长度不能小于 6 位")
             return
         }
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
             try {
-                authRepository.login(email.trim(), password)
+                authRepository.login(trimmedEmail, password)
                     .onSuccess {
                         _uiState.value = LoginUiState.Success
                         // 登录成功后在后台尝试同步本地待上传数据（不阻塞UI）

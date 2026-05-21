@@ -11,7 +11,17 @@ data class Statistics(
     val totalExpense: Double,
     val netIncome: Double,
     val categoryBreakdown: List<CategoryStat>,
+    val dailyTrends: List<DailyTrend> = emptyList(),
     val chartUrl: String? = null
+)
+
+/**
+ * 每日趋势
+ */
+data class DailyTrend(
+    val day: Int,
+    val income: Double,
+    val expense: Double
 )
 
 /**
@@ -51,4 +61,3 @@ enum class TrendDirection {
     STABLE,
     DECREASING
 }
-

@@ -264,6 +264,71 @@
                 android:paddingHorizontal="16dp"
                 android:paddingBottom="16dp">
 
+                <!-- 月度趋势折线图卡片 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardTrendChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:layout_marginBottom="16dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="月度收支趋势"
+                                android:textColor="#333333"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:gravity="end">
+
+                                <TextView
+                                    android:id="@+id/tvMoMExpense"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:textColor="#FF5722"
+                                    android:textSize="12sp"
+                                    tools:text="支出环比: +5.2%" />
+
+                                <TextView
+                                    android:id="@+id/tvMoMIncome"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:textColor="#4CAF50"
+                                    android:textSize="12sp"
+                                    android:layout_marginTop="2dp"
+                                    tools:text="收入环比: -1.2%" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <com.github.mikephil.charting.charts.LineChart
+                            android:id="@+id/lineChartTrend"
+                            android:layout_width="match_parent"
+                            android:layout_height="220dp"
+                            android:layout_marginTop="8dp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
                 <!-- 支出环状图卡片 -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardExpenseChart"

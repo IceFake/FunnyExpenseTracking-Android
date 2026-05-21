@@ -58,22 +58,6 @@ class StockRepositoryImpl @Inject constructor(
         return stockHoldingDao.getTotalStockCost() ?: 0.0
     }
 
-    override suspend fun getStockQuote(symbol: String): Resource<StockQuote> {
-        return try {
-            val response = stockApiService.getQuote(symbol)
-            if (response.isSuccessful && response.body()?.data != null) {
-                val dto = response.body()!!.data!!
-                val quote = dto.toDomainModel()
-                stockHoldingDao.updatePrice(symbol, quote.currentPrice)
-                Resource.Success(quote)
-            } else {
-                Resource.Error(response.message() ?: "获取行情失败")
-            }
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "网络错误")
-        }
-    }
-
     override suspend fun getBatchQuotes(symbols: List<String>): Resource<List<StockQuote>> {
         return try {
             val response = stockApiService.getBatchQuotes(BatchQuoteRequest(symbols))
@@ -85,35 +69,6 @@ class StockRepositoryImpl @Inject constructor(
                 Resource.Success(quotes)
             } else {
                 Resource.Error(response.message() ?: "批量获取行情失败")
-            }
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "网络错误")
-        }
-    }
-
-    override suspend fun searchStock(keyword: String): Resource<List<StockQuote>> {
-        return try {
-            val response = stockApiService.searchStock(keyword)
-            if (response.isSuccessful && response.body()?.data != null) {
-                Resource.Success(
-                    response.body()!!.data!!.map { searchResult ->
-                        StockQuote(
-                            symbol = searchResult.symbol,
-                            name = searchResult.name,
-                            currentPrice = 0.0,
-                            openPrice = 0.0,
-                            highPrice = 0.0,
-                            lowPrice = 0.0,
-                            closePrice = 0.0,
-                            change = 0.0,
-                            changePercent = 0.0,
-                            volume = 0,
-                            timestamp = System.currentTimeMillis()
-                        )
-                    }
-                )
-            } else {
-                Resource.Error(response.message() ?: "搜索股票失败")
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "网络错误")
@@ -136,28 +91,23 @@ class StockRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getRealtimeQuote(symbol: String): Resource<StockQuote> {
-        return try {
-            val response = stockApiService.getRealtimeQuote(symbol)
-            if (response.isSuccessful && response.body()?.data != null) {
-                val dto = response.body()!!.data!!
-                val quote = dto.toDomainModel()
-                stockHoldingDao.updatePrice(symbol, quote.currentPrice)
-                Resource.Success(quote)
-            } else {
-                Resource.Error(response.message() ?: "获取实时行情失败")
-            }
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "网络错误")
-        }
-    }
-
     private fun StockHoldingEntity.toDomainModel(): StockHolding {
-        return StockHolding(id = id, symbol = symbol, name = name, shares = shares, purchasePrice = purchasePrice, totalCost = totalCost, purchaseDate = purchaseDate, currentPrice = currentPrice, lastUpdated = lastUpdated)
+        return StockHolding(
+            id = id, symbol = symbol, name = name,
+            shares = shares, purchasePrice = purchasePrice,
+            totalCost = totalCost, purchaseDate = purchaseDate,
+            currentPrice = currentPrice, lastUpdated = lastUpdated
+        )
     }
 
     private fun StockHolding.toEntity(): StockHoldingEntity {
-        return StockHoldingEntity(id = id, symbol = symbol, name = name, shares = shares, purchasePrice = purchasePrice, totalCost = totalCost, purchaseDate = purchaseDate, currentPrice = currentPrice, lastUpdated = lastUpdated, createdAt = System.currentTimeMillis())
+        return StockHoldingEntity(
+            id = id, symbol = symbol, name = name,
+            shares = shares, purchasePrice = purchasePrice,
+            totalCost = totalCost, purchaseDate = purchaseDate,
+            currentPrice = currentPrice, lastUpdated = lastUpdated,
+            createdAt = System.currentTimeMillis()
+        )
     }
 
     private fun StockQuoteDto.toDomainModel(): StockQuote {
@@ -171,18 +121,12 @@ class StockRepositoryImpl @Inject constructor(
         val vol = volume ?: 0L
         val ts = timestamp ?: System.currentTimeMillis()
         return StockQuote(
-            symbol = symbol,
-            name = name,
-            currentPrice = cp,
-            openPrice = op,
-            highPrice = hi,
-            lowPrice = lo,
-            closePrice = pc,
-            change = ch,
-            changePercent = pct,
-            volume = vol,
+            symbol = symbol, name = name,
+            currentPrice = cp, openPrice = op,
+            highPrice = hi, lowPrice = lo,
+            closePrice = pc, change = ch,
+            changePercent = pct, volume = vol,
             timestamp = ts
         )
     }
 }
-

@@ -5,28 +5,13 @@ import retrofit2.Response
 import retrofit2.http.*
 
 /**
- * 股票行情API
+ * 股票行情API — 仅保留后端实际实现的端点
+ * 批量行情: POST /stock/quotes
  */
 interface StockApiService {
-
-    @GET("stock/quote/{symbol}")
-    suspend fun getQuote(
-        @Path("symbol") symbol: String
-    ): Response<ApiResponse<StockQuoteDto>>
-
-    @GET("stock/realtime/{symbol}")
-    suspend fun getRealtimeQuote(
-        @Path("symbol") symbol: String
-    ): Response<ApiResponse<StockQuoteDto>>
 
     @POST("stock/quotes")
     suspend fun getBatchQuotes(
         @Body request: BatchQuoteRequest
     ): Response<ApiResponse<BatchQuoteResponse>>
-
-    @GET("stock/search")
-    suspend fun searchStock(
-        @Query("keyword") keyword: String
-    ): Response<ApiResponse<List<StockSearchResult>>>
 }
-
