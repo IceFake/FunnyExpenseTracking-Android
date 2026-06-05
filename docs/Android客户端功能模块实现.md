@@ -318,26 +318,17 @@ class TransactionRepositoryImpl @Inject constructor(
      * @return 本地生成的记录 ID
      */
     override suspend fun addTransaction(transaction: Transaction): Long {
-        // 先写本地并标记待上传，保证离线可用
         val entity = toEntity(transaction).copy(
             syncStatus = SyncStatus.PENDING_UPLOAD,
             updatedAt = System.currentTimeMillis()
         )
         val localId = transactionDao.insert(entity)
-
-        // 网络可用时立即尝试同步，减少待同步积压
         trySync()
         return localId
     }
 
-    /**
-     * 更新交易记录：保留原有 serverId，将同步状态重置为 PENDING_UPLOAD，
-     * 确保后续同步流程能将本地修改上传至后端。
-     * @param transaction 包含新值的交易领域对象
-     */
     override suspend fun updateTransaction(transaction: Transaction) {
         val existingEntity = transactionDao.getById(transaction.id)
-        // 更新后统一回到待上传状态，由同步管理器处理与后端的一致性
         val entity = toEntity(transaction).copy(
             serverId = existingEntity?.serverId,
             syncStatus = SyncStatus.PENDING_UPLOAD,
@@ -347,21 +338,13 @@ class TransactionRepositoryImpl @Inject constructor(
         trySync()
     }
 
-    /**
-     * 删除交易记录：区分"已同步到后端"与"仅存在于本地"两种情况。
-     * 已同步的记录执行软删除标记，待后端确认后再物理删除；
-     * 未同步的记录直接物理删除，避免产生孤儿同步请求。
-     * @param transaction 待删除的交易领域对象
-     */
     override suspend fun deleteTransaction(transaction: Transaction) {
         val entity = transactionDao.getById(transaction.id)
         if (entity != null) {
             if (entity.serverId != null) {
-                // 已上云数据仅做软删除标记，待后端删除成功后再清理本地
                 transactionDao.markAsDeleted(transaction.id)
                 trySync()
             } else {
-                // 本地未上云数据可直接删除
                 transactionDao.delete(entity)
             }
         }
@@ -492,7 +475,6 @@ class InvestmentViewModel @Inject constructor(
 
                 val mergedInvestments = mergeInvestments(investments)
 
-                // 聚合统计：总投入 / 总市值 / 总盈亏
                 val totalInvestment = mergedInvestments.sumOf { it.investment }
                 val totalCurrentValue = mergedInvestments.sumOf { it.calcCurrentValue() }
                 val totalProfitLoss = totalCurrentValue - totalInvestment
@@ -588,19 +570,8 @@ class InvestmentRepositoryImpl @Inject constructor(
         private const val TAG = "InvestmentRepository"
     }
 
-    // 常规 CRUD 与映射方法省略，保留行情刷新核心流程
-    /* logic omitted for brevity */
-
-    /**
-     * 批量刷新全部持仓股票的最新价格。
-     * 流程：查询本地持仓代码 → 转换为行情接口所需格式 → 批量请求 → 解析响应 →
-     * 按原始代码回写 currentPrice 至数据库。
-     * 若持仓为空则直接返回成功；若响应中无有效行情数据则返回 Error。
-     * @return Resource<Unit> 成功时携带 Unit，失败时携带错误描述
-     */
     override suspend fun refreshAllStockPrices(): Resource<Unit> {
         return try {
-            // 读取本地持仓代码，作为后端行情代理的输入
             val stockCodes = investmentDao.getAllStockCodes()
             Log.d(TAG, "获取到的股票代码: $stockCodes")
 
@@ -609,7 +580,6 @@ class InvestmentRepositoryImpl @Inject constructor(
                 return Resource.Success(Unit)
             }
 
-            // 统一代码格式后批量请求，减少网络往返
             val sinaSymbols = stockCodes.map { convertToSinaSymbol(it) }
             val symbolsParam = sinaSymbols.joinToString(",")
             Log.d(TAG, "请求后端股票行情 API, symbols: $symbolsParam")
@@ -626,12 +596,10 @@ class InvestmentRepositoryImpl @Inject constructor(
                     return Resource.Error("未找到股票数据，请检查股票代码格式")
                 }
 
-                // 逐个回写数据库，按原始代码匹配确保一致性
                 quotes.forEach { result ->
                     Log.d(TAG, "更新股票 ${result.symbol} 价格: ${result.currentPrice ?: 0.0}")
                     val originalCode = findOriginalCode(stockCodes, result.symbol)
                     if (originalCode != null) {
-                        // 按原始代码回写数据库，确保界面列表与本地数据一致
                         investmentDao.updateStockPrice(originalCode, result.currentPrice ?: 0.0)
                     }
                 }
