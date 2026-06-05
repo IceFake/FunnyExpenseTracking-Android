@@ -1,6 +1,15 @@
 package com.example.funnyexpensetracking.domain.model
 
 /**
+ * 数据来源标记 —— 用于三层兜底方案
+ */
+enum class DataSource {
+    REMOTE,   // 来自后端API（最新数据）
+    LOCAL,    // 来自本地Room数据库（离线但完整）
+    CACHED    // 来自快照缓存（可能过期，最后兜底）
+}
+
+/**
  * 统计数据领域模型
  */
 data class Statistics(
@@ -12,7 +21,8 @@ data class Statistics(
     val netIncome: Double,
     val categoryBreakdown: List<CategoryStat>,
     val dailyTrends: List<DailyTrend> = emptyList(),
-    val chartUrl: String? = null
+    val chartUrl: String? = null,
+    val dataSource: DataSource = DataSource.REMOTE
 )
 
 /**
@@ -39,7 +49,8 @@ data class CategoryStat(
     val category: String,
     val amount: Double,
     val percentage: Double,
-    val type: TransactionType
+    val type: TransactionType,
+    val dataSource: DataSource = DataSource.REMOTE
 )
 
 /**
