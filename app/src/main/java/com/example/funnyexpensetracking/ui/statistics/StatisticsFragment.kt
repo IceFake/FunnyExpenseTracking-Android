@@ -17,6 +17,7 @@ import com.example.funnyexpensetracking.R
 import com.example.funnyexpensetracking.databinding.FragmentStatisticsBinding
 import com.example.funnyexpensetracking.domain.model.CategoryStat
 import com.example.funnyexpensetracking.domain.model.DailyTrend
+import com.example.funnyexpensetracking.domain.model.DataSource
 import com.example.funnyexpensetracking.domain.model.TransactionType
 import com.example.funnyexpensetracking.ui.aianalysis.AIAnalysisFragment
 import com.example.funnyexpensetracking.ui.financialquery.FinancialQueryFragment
@@ -233,6 +234,10 @@ class StatisticsFragment : Fragment() {
                 viewModel.selectYear(state.selectedYear + 1)
             }
         }
+
+        binding.btnRetry.setOnClickListener {
+            viewModel.loadCurrentMonthStatistics()
+        }
     }
 
     private fun navigateToAiAnalysis() {
@@ -256,94 +261,12 @@ class StatisticsFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.uiState.collectLatest { state ->
-                        // 更新日期显示
-                        if (state.isMonthlyView) {
-                            binding.btnSelectDate.text = "${state.selectedYear}年${String.format("%02d", state.selectedMonth)}月"
-                        } else {
-                            binding.btnSelectDate.text = "${state.selectedYear}年"
-                        }
-
-                        // 更新统计数据
-                        state.currentStatistics?.let { stats ->
-                            binding.tvTotalIncome.text = "+${CurrencyUtil.formatCurrency(stats.totalIncome)}"
-                            binding.tvTotalExpense.text = "-${CurrencyUtil.formatCurrency(stats.totalExpense)}"
-                            val balance = stats.totalIncome - stats.totalExpense
-                            binding.tvBalance.text = CurrencyUtil.formatCurrency(balance)
-                            if (balance >= 0) {
-                                binding.tvBalance.setTextColor(requireContext().getColor(android.R.color.holo_green_light))
-                            } else {
-                                binding.tvBalance.setTextColor(requireContext().getColor(android.R.color.holo_red_light))
-                            }
-
-                            // 环比计算显示
-                            if (state.isMonthlyView) {
-                                val curExpense = stats.totalExpense
-                                val prevExpense = state.previousTotalExpense
-                                if (prevExpense != null && prevExpense > 0) {
-                                    val percent = ((curExpense - prevExpense) / prevExpense) * 100
-                                    val sign = if (percent > 0) "+" else ""
-                                    binding.tvMoMExpense.text = "支出环比: $sign${String.format("%.1f", percent)}%"
-                                } else {
-                                    binding.tvMoMExpense.text = "支出环比: --"
-                                }
-
-                                val curIncome = stats.totalIncome
-                                val prevIncome = state.previousTotalIncome
-                                if (prevIncome != null && prevIncome > 0) {
-                                    val percent = ((curIncome - prevIncome) / prevIncome) * 100
-                                    val sign = if (percent > 0) "+" else ""
-                                    binding.tvMoMIncome.text = "收入环比: $sign${String.format("%.1f", percent)}%"
-                                } else {
-                                    binding.tvMoMIncome.text = "收入环比: --"
-                                }
-                            } else {
-                                binding.tvMoMExpense.text = ""
-                                binding.tvMoMIncome.text = ""
-                            }
-                        }
-
-                        // 更新折线图
-                        if (state.currentStatistics?.dailyTrends.isNullOrEmpty()) {
-                            binding.cardTrendChart.visibility = View.GONE
-                        } else {
-                            binding.cardTrendChart.visibility = View.VISIBLE
-                            updateLineChart(binding.lineChartTrend, state.currentStatistics!!.dailyTrends)
-                        }
-
-                        // 更新分类统计图表
+                        updateDateDisplay(state)
+                        updateSummaryCards(state)
+                        updateTrendChart(state)
                         updateCategoryCharts(state.categoryStats)
-
-                        // 更新加载状态
-                        when (state.loadingState) {
-                            LoadingState.LOADING -> {
-                                binding.progressBar.visibility = View.VISIBLE
-                                binding.cardTrendChart.visibility = View.GONE
-                                binding.cardExpenseChart.visibility = View.GONE
-                                binding.cardIncomeChart.visibility = View.GONE
-                                binding.emptyView.visibility = View.GONE
-                            }
-                            LoadingState.SUCCESS -> {
-                                binding.progressBar.visibility = View.GONE
-                                if (state.categoryStats.isEmpty() && state.currentStatistics?.dailyTrends.isNullOrEmpty()) {
-                                    binding.cardTrendChart.visibility = View.GONE
-                                    binding.cardExpenseChart.visibility = View.GONE
-                                    binding.cardIncomeChart.visibility = View.GONE
-                                    binding.emptyView.visibility = View.VISIBLE
-                                } else {
-                                    if (!state.currentStatistics?.dailyTrends.isNullOrEmpty()) {
-                                        binding.cardTrendChart.visibility = View.VISIBLE
-                                    }
-                                    binding.cardExpenseChart.visibility = View.VISIBLE
-                                    binding.cardIncomeChart.visibility = View.VISIBLE
-                                    binding.emptyView.visibility = View.GONE
-                                }
-                            }
-                            LoadingState.ERROR -> {
-                                binding.progressBar.visibility = View.GONE
-                                binding.emptyView.visibility = View.VISIBLE
-                            }
-                            else -> {}
-                        }
+                        updateLoadingState(state)
+                        updateOfflineBanner(state)
                     }
                 }
 
@@ -353,13 +276,138 @@ class StatisticsFragment : Fragment() {
                             is StatisticsUiEvent.ShowMessage -> {
                                 Toast.makeText(requireContext(), event.message, Toast.LENGTH_SHORT).show()
                             }
-                            is StatisticsUiEvent.OpenChart -> {
-                                // 可以在这里处理打开图表的逻辑
-                            }
+                            is StatisticsUiEvent.OpenChart -> {}
                         }
                     }
                 }
             }
+        }
+    }
+
+    // ==================== UI子更新方法 ====================
+
+    private fun updateDateDisplay(state: StatisticsUiState) {
+        binding.btnSelectDate.text = if (state.isMonthlyView)
+            "${state.selectedYear}年${String.format("%02d", state.selectedMonth)}月"
+        else
+            "${state.selectedYear}年"
+    }
+
+    private fun updateSummaryCards(state: StatisticsUiState) {
+        val ctx = activity ?: return
+        state.currentStatistics?.let { stats ->
+            binding.tvTotalIncome.text = "+${CurrencyUtil.formatCurrency(stats.totalIncome)}"
+            binding.tvTotalExpense.text = "-${CurrencyUtil.formatCurrency(stats.totalExpense)}"
+            val balance = stats.totalIncome - stats.totalExpense
+            binding.tvBalance.text = CurrencyUtil.formatCurrency(balance)
+            binding.tvBalance.setTextColor(
+                if (balance >= 0) ctx.getColor(android.R.color.holo_green_light)
+                else ctx.getColor(android.R.color.holo_red_light)
+            )
+
+            // 环比
+            if (state.isMonthlyView) {
+                updateMoMText(binding.tvMoMExpense, "支出环比", stats.totalExpense, state.previousTotalExpense)
+                updateMoMText(binding.tvMoMIncome, "收入环比", stats.totalIncome, state.previousTotalIncome)
+            } else {
+                binding.tvMoMExpense.text = ""
+                binding.tvMoMIncome.text = ""
+            }
+        }
+    }
+
+    private fun updateMoMText(view: android.widget.TextView, label: String, current: Double, previous: Double?) {
+        if (previous != null && previous > 0) {
+            val percent = ((current - previous) / previous) * 100
+            val sign = if (percent > 0) "+" else ""
+            view.text = "$label: $sign${String.format("%.1f", percent)}%"
+        } else {
+            view.text = "$label: --"
+        }
+    }
+
+    /**
+     * 折线图 —— 只渲染有真实数据的趋势
+     */
+    private fun updateTrendChart(state: StatisticsUiState) {
+        val trends = state.currentStatistics?.dailyTrends
+        val hasRealTrendData = trends?.any { it.income > 0 || it.expense > 0 } == true
+        if (!hasRealTrendData) {
+            binding.cardTrendChart.visibility = View.GONE
+            binding.lineChartTrend.clear()
+        } else {
+            binding.cardTrendChart.visibility = View.VISIBLE
+            try {
+                updateLineChart(binding.lineChartTrend, trends!!)
+            } catch (e: Exception) {
+                binding.cardTrendChart.visibility = View.GONE
+                binding.lineChartTrend.clear()
+            }
+        }
+    }
+
+    /**
+     * 离线横幅
+     */
+    private fun updateOfflineBanner(state: StatisticsUiState) {
+        val dataSource = state.currentStatistics?.dataSource
+        if (dataSource == DataSource.LOCAL) {
+            binding.bannerOffline.visibility = View.VISIBLE
+            binding.tvBannerIcon.text = "💾"
+            binding.tvBannerText.text = "当前数据来自本地数据库"
+            binding.btnRetry.visibility = View.GONE
+        } else if (state.loadingState == LoadingState.ERROR) {
+            binding.bannerOffline.visibility = View.VISIBLE
+            binding.tvBannerIcon.text = "📡"
+            binding.tvBannerText.text = "后端不可达，数据来自本地"
+            binding.btnRetry.visibility = View.VISIBLE
+        } else {
+            binding.bannerOffline.visibility = View.GONE
+        }
+    }
+
+    /**
+     * 加载状态
+     */
+    private fun updateLoadingState(state: StatisticsUiState) {
+        when (state.loadingState) {
+            LoadingState.LOADING -> {
+                binding.progressBar.visibility = View.VISIBLE
+                binding.cardTrendChart.visibility = View.GONE
+                binding.cardExpenseChart.visibility = View.GONE
+                binding.cardIncomeChart.visibility = View.GONE
+                binding.emptyView.visibility = View.GONE
+            }
+            LoadingState.SUCCESS -> {
+                binding.progressBar.visibility = View.GONE
+                // 判断是否有真实数据（分类非空 或 日趋势有非零值）
+                val hasRealCategories = state.categoryStats.isNotEmpty()
+                val hasRealTrend = state.currentStatistics?.dailyTrends?.any { it.income > 0 || it.expense > 0 } == true
+
+                if (!hasRealCategories && !hasRealTrend) {
+                    // 完全无数据 → 显示空状态引导
+                    binding.cardTrendChart.visibility = View.GONE
+                    binding.cardExpenseChart.visibility = View.GONE
+                    binding.cardIncomeChart.visibility = View.GONE
+                    binding.emptyView.visibility = View.VISIBLE
+                    binding.tvEmptyIcon.text = "📊"
+                    binding.tvEmptyTitle.text = "暂无统计数据"
+                    binding.tvEmptySubtitle.text = "添加账单后即可查看统计图表"
+                } else {
+                    binding.emptyView.visibility = View.GONE
+                }
+            }
+            LoadingState.ERROR -> {
+                binding.progressBar.visibility = View.GONE
+                binding.cardTrendChart.visibility = View.GONE
+                binding.cardExpenseChart.visibility = View.GONE
+                binding.cardIncomeChart.visibility = View.GONE
+                binding.emptyView.visibility = View.VISIBLE
+                binding.tvEmptyIcon.text = "⚠️"
+                binding.tvEmptyTitle.text = "加载失败"
+                binding.tvEmptySubtitle.text = state.errorMessage ?: "请检查网络后重试"
+            }
+            else -> {}
         }
     }
 

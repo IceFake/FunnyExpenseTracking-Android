@@ -416,6 +416,47 @@
                     android:layout_gravity="center"
                     android:visibility="gone" />
 
+                <!-- 离线/错误横幅 -->
+                <LinearLayout
+                    android:id="@+id/bannerOffline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp"
+                    android:background="#FFF3E0"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/tvBannerIcon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="💾"
+                        android:textSize="16sp"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/tvBannerText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="数据来自本地数据库"
+                        android:textColor="#E65100"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRetry"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="重试"
+                        android:textColor="#FF5722"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
+
+                </LinearLayout>
+
                 <!-- 空状态 -->
                 <LinearLayout
                     android:id="@+id/emptyView"
@@ -426,12 +467,14 @@
                     android:visibility="gone">
 
                     <TextView
+                        android:id="@+id/tvEmptyIcon"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="📊"
                         android:textSize="48sp" />
 
                     <TextView
+                        android:id="@+id/tvEmptyTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="暂无统计数据"
@@ -440,6 +483,7 @@
                         android:layout_marginTop="8dp" />
 
                     <TextView
+                        android:id="@+id/tvEmptySubtitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="添加账单后查看统计图表"
