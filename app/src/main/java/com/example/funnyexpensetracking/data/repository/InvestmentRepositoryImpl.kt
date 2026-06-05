@@ -13,12 +13,17 @@ import com.example.funnyexpensetracking.util.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * 投资Repository实现类
- * 使用新浪财经 API 获取股票价格（中国大陆可访问）
+ * 使用后端股票行情代理 API 获取实时价格
+ *
+ * 兜底策略：
+ * - API 超时 5s 后自动放弃刷新，保留本地已有价格
+ * - 投资列表 / 增删改始终走 Room 本地数据库，离线可用
  */
 @Singleton
 class InvestmentRepositoryImpl @Inject constructor(
@@ -28,6 +33,7 @@ class InvestmentRepositoryImpl @Inject constructor(
 
     companion object {
         private const val TAG = "InvestmentRepository"
+        private const val API_TIMEOUT_MS = 5_000L
     }
 
     override fun getAllInvestments(): Flow<List<Investment>> {
@@ -61,52 +67,46 @@ class InvestmentRepositoryImpl @Inject constructor(
     }
 
     override suspend fun refreshAllStockPrices(): Resource<Unit> {
-        return try {
-            val stockCodes = investmentDao.getAllStockCodes()
-            Log.d(TAG, "获取到的股票代码: $stockCodes")
+        val result = withTimeoutOrNull(API_TIMEOUT_MS) {
+            try {
+                val stockCodes = investmentDao.getAllStockCodes()
+                Log.d(TAG, "股票代码: $stockCodes")
 
-            if (stockCodes.isEmpty()) {
-                Log.d(TAG, "没有股票需要刷新价格")
-                return Resource.Success(Unit)
-            }
-
-            // 转换股票代码为后端行情代理格式
-            val sinaSymbols = stockCodes.map { convertToSinaSymbol(it) }
-            val symbolsParam = sinaSymbols.joinToString(",")
-            Log.d(TAG, "请求后端股票行情 API, symbols: $symbolsParam")
-
-            val response = stockApiService.getBatchQuotes(BatchQuoteRequest(sinaSymbols))
-            Log.d(TAG, "API响应码: ${response.code()}, 是否成功: ${response.isSuccessful}")
-
-            if (response.isSuccessful && response.body() != null) {
-                val quotes = response.body()!!.data?.quotes.orEmpty()
-                Log.d(TAG, "解析到 ${quotes.size} 个股票价格")
-
-                if (quotes.isEmpty()) {
-                    Log.w(TAG, "没有获取到有效的股票价格数据")
-                    return Resource.Error("未找到股票数据，请检查股票代码格式")
+                if (stockCodes.isEmpty()) {
+                    Log.d(TAG, "没有股票需要刷新价格")
+                    return@withTimeoutOrNull Resource.Success(Unit)
                 }
 
-                // 更新每个股票的价格
-                quotes.forEach { result ->
-                    Log.d(TAG, "更新股票 ${result.symbol} 价格: ${result.currentPrice ?: 0.0}")
-                    // 找到原始代码并更新
-                    val originalCode = findOriginalCode(stockCodes, result.symbol)
-                    if (originalCode != null) {
-                        investmentDao.updateStockPrice(originalCode, result.currentPrice ?: 0.0)
+                val sinaSymbols = stockCodes.map { convertToSinaSymbol(it) }
+                val response = stockApiService.getBatchQuotes(BatchQuoteRequest(sinaSymbols))
+                Log.d(TAG, "API响应码: ${response.code()}")
+
+                if (response.isSuccessful && response.body() != null) {
+                    val quotes = response.body()!!.data?.quotes.orEmpty()
+                    Log.d(TAG, "解析到 ${quotes.size} 个股票价格")
+
+                    if (quotes.isEmpty()) {
+                        return@withTimeoutOrNull Resource.Error("未找到股票数据，请检查股票代码格式")
                     }
-                }
 
-                Resource.Success(Unit)
-            } else {
-                val errorBody = response.errorBody()?.string()
-                Log.e(TAG, "API请求失败: ${response.code()}, 错误信息: $errorBody")
-                Resource.Error("获取股票价格失败: ${response.code()} - ${response.message()}")
+                    quotes.forEach { result ->
+                        val originalCode = findOriginalCode(stockCodes, result.symbol)
+                        if (originalCode != null) {
+                            investmentDao.updateStockPrice(originalCode, result.currentPrice ?: 0.0)
+                        }
+                    }
+                    Resource.Success(Unit)
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e(TAG, "API请求失败: ${response.code()}, 错误信息: $errorBody")
+                    Resource.Error("获取股票价格失败: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "刷新股票价格异常", e)
+                Resource.Error("网络错误: ${e.message}")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "刷新股票价格异常", e)
-            Resource.Error("网络错误: ${e.message}")
         }
+        return result ?: Resource.Error("后端不可达，股票价格可能不是最新")
     }
 
     /**

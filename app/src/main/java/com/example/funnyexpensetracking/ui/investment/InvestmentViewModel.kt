@@ -290,31 +290,33 @@ class InvestmentViewModel @Inject constructor(
     }
 
     /**
-     * 内部刷新股票价格
+     * 内部刷新股票价格（自动，静默）
      */
     private suspend fun refreshStockPricesInternal() {
         when (val result = investmentRepository.refreshAllStockPrices()) {
             is Resource.Success -> {
-                // 刷新成功，UI会通过Flow自动更新
+                updateState { copy(stockPriceFresh = true, stockRefreshError = null) }
             }
             is Resource.Error -> {
-                // 静默失败，不显示错误消息
+                updateState { copy(stockPriceFresh = false, stockRefreshError = result.message) }
             }
             is Resource.Loading -> {}
         }
     }
 
     /**
-     * 手动刷新股票价格
+     * 手动刷新股票价格（显示结果）
      */
     fun refreshStockPrices() {
         viewModelScope.launch {
             updateState { copy(isRefreshing = true) }
             when (val result = investmentRepository.refreshAllStockPrices()) {
                 is Resource.Success -> {
+                    updateState { copy(stockPriceFresh = true, stockRefreshError = null) }
                     sendEvent(InvestmentUiEvent.ShowMessage("刷新成功"))
                 }
                 is Resource.Error -> {
+                    updateState { copy(stockPriceFresh = false, stockRefreshError = result.message) }
                     sendEvent(InvestmentUiEvent.ShowMessage("刷新失败: ${result.message}"))
                 }
                 is Resource.Loading -> {}

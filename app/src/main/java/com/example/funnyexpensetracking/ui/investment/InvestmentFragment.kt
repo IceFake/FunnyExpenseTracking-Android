@@ -95,6 +95,11 @@ class InvestmentFragment : Fragment() {
         binding.swipeRefreshLayout.setOnRefreshListener {
             viewModel.refreshStockPrices()
         }
+
+        // 横幅重试按钮
+        binding.btnRetry.setOnClickListener {
+            viewModel.refreshStockPrices()
+        }
     }
 
     private fun observeState() {
@@ -106,6 +111,19 @@ class InvestmentFragment : Fragment() {
 
                     // 更新统计卡片
                     updateSummaryCard(state)
+
+                    // 更新离线横幅
+                    if (!state.stockPriceFresh && state.stockRefreshError != null) {
+                        binding.bannerOffline.visibility = View.VISIBLE
+                        binding.tvBannerIcon.text = "📡"
+                        binding.tvBannerText.text = state.stockRefreshError
+                    } else if (!state.stockPriceFresh) {
+                        binding.bannerOffline.visibility = View.VISIBLE
+                        binding.tvBannerIcon.text = "💾"
+                        binding.tvBannerText.text = "股票价格来自本地缓存"
+                    } else {
+                        binding.bannerOffline.visibility = View.GONE
+                    }
 
                     // 更新列表
                     adapter.submitList(state.filteredInvestments)

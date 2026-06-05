@@ -39,6 +39,10 @@ data class InvestmentUiState(
     val editingInvestment: Investment? = null,
     // 是否正在刷新股票价格
     val isRefreshing: Boolean = false,
+    // 股票价格是否来自实时数据 (false = 本地缓存/离线)
+    val stockPriceFresh: Boolean = true,
+    // 最近的刷新错误消息（离线时显示）
+    val stockRefreshError: String? = null,
     // 错误信息
     override val errorMessage: String? = null
 ) : UiState, ErrorState
